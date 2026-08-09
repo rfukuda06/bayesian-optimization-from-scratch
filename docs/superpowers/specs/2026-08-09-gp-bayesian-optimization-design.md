@@ -191,7 +191,7 @@ True function f(x) = x·sin(x) on [0, 10]. Three-panel figure: (a) samples from 
 - **Objective:** mean 5-fold stratified CV accuracy of `SVC(C=10^a, gamma=10^b)` on the pool. CV smooths the noise and plateaus of a single split.
 - **Search box:** a = log₁₀C ∈ [−3, 3]; b = log₁₀γ ∈ [−5, 1]. BO operates in these log coordinates — the GP never sees raw C or γ.
 - **Budget:** 25 evaluations per method per trial. BO: 5 initial + 20 iterations. Random search: 25 seeded uniform draws from the same box.
-- **Trials:** 10 seeds per method. Estimated total runtime ~10–25 minutes.
+- **Trials:** 10 seeds per method. Estimated runtime ~10–25 minutes for the comparison itself, plus a one-time ~10-minute computation of the cached ground-truth grid (reused thereafter).
 - **Figures:** best-so-far CV accuracy vs. evaluation count with mean ± std bands per method; BO's sampled points over the (a, b) plane on a cached 20×20 ground-truth accuracy grid (computed once, saved to `data/`).
 - **Final honesty check:** each method's overall best configuration is retrained on the full pool and scored once on the held-out test set → reported in the README table, verifying that CV gains transfer.
 - **Honest framing:** BO is expected to win clearly in early evaluations; random search often nearly catches up by evaluation 25 on a well-bounded 2D space (Bergstra & Bengio). The README frames the result around evaluation efficiency, as the outline already does.
