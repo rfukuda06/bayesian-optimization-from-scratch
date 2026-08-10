@@ -13,6 +13,7 @@ import warnings
 
 import numpy as np
 from scipy.linalg import LinAlgError, cho_solve, cholesky, solve_triangular
+from scipy.optimize import minimize
 
 from gpbo.kernels import RBFKernel, _as_2d
 
@@ -85,3 +86,49 @@ class GaussianProcess:
             - np.sum(np.log(np.diag(self._L)))
             - 0.5 * n * np.log(2.0 * np.pi)
         )
+
+    def _get_log_theta(self):
+        return np.log(
+            [self.kernel.length_scale, self.kernel.signal_variance, self.noise_variance]
+        )
+
+    def _set_log_theta(self, log_theta):
+        self.kernel.length_scale = float(np.exp(log_theta[0]))
+        self.kernel.signal_variance = float(np.exp(log_theta[1]))
+        self.noise_variance = float(np.exp(log_theta[2]))
+
+    def fit_hyperparameters(self, bounds=None, n_restarts=5, rng=None) -> None:
+        """Maximize the LML over theta = log(l, sf2, sn2) with multi-start L-BFGS-B.
+
+        Optimizing in log space keeps parameters positive and puts the scales
+        on comparable footing. The LML is multimodal, hence the restarts; the
+        current theta is always kept as a candidate, so the fitted LML can
+        never be worse than the starting one.
+        """
+        if self._L is None:
+            raise RuntimeError("Call fit() before fit_hyperparameters().")
+        if bounds is None:
+            bounds = DEFAULT_HP_BOUNDS
+        rng = np.random.default_rng() if rng is None else rng
+
+        def neg_lml(log_theta):
+            self._set_log_theta(log_theta)
+            try:
+                self._update_factorization()
+                return -self.log_marginal_likelihood()
+            except LinAlgError:
+                return 1e10  # infeasible theta: huge penalty, finite for L-BFGS
+
+        warm = self._get_log_theta()
+        candidates = [(neg_lml(warm), warm)]  # baseline: keeping current theta
+        starts = [warm] + [
+            rng.uniform(bounds[:, 0], bounds[:, 1]) for _ in range(n_restarts)
+        ]
+        for x0 in starts:
+            res = minimize(neg_lml, x0, method="L-BFGS-B", bounds=bounds)
+            if np.isfinite(res.fun):
+                candidates.append((res.fun, res.x))
+
+        best = min(candidates, key=lambda c: c[0])
+        self._set_log_theta(best[1])
+        self._update_factorization()
