@@ -75,3 +75,13 @@ def test_predict_shapes(data_1d):
     assert mean.shape == (7,) and std.shape == (7,)
     mean, cov = gp.predict(np.linspace(0, 10, 7), return_cov=True)
     assert cov.shape == (7, 7)
+
+
+def test_log_marginal_likelihood_matches_sklearn(data_1d):
+    X, y = data_1d
+    ours, theirs = _fit_both(X, y)
+    np.testing.assert_allclose(
+        ours.log_marginal_likelihood(),
+        theirs.log_marginal_likelihood(),   # no args: LML at the fixed theta
+        atol=1e-6,
+    )
