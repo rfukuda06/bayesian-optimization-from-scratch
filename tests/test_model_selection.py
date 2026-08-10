@@ -97,3 +97,12 @@ def test_validation_errors():
                    param_space={"log10_C": (2.0, -2.0)})
     with pytest.raises(ValueError):
         decode_parameters(np.array([1.0, 2.0]), ("only_one",))
+
+
+def test_public_api_exports():
+    import gpbo
+
+    assert gpbo.tune_model is tune_model
+    assert gpbo.TuningResult is TuningResult
+    assert gpbo.build_cv_objective is build_cv_objective
+    assert gpbo.decode_parameters is decode_parameters
