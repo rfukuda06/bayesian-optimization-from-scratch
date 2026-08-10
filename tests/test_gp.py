@@ -124,3 +124,14 @@ def test_fit_hyperparameters_is_deterministic_given_rng():
             (gp.kernel.length_scale, gp.kernel.signal_variance, gp.noise_variance)
         )
     assert results[0] == results[1]
+
+
+def test_sample_posterior_shape_and_mean(data_1d):
+    X, y = data_1d
+    gp = GaussianProcess(RBFKernel(1.5, 2.0), 1e-8)
+    gp.fit(X, y)
+    X_star = np.linspace(0, 10, 30)[:, None]
+    samples = gp.sample_posterior(X_star, 500, rng=np.random.default_rng(1))
+    assert samples.shape == (500, 30)
+    mean, _ = gp.predict(X_star)
+    np.testing.assert_allclose(samples.mean(axis=0), mean, atol=0.2)
