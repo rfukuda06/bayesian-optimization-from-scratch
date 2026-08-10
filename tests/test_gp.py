@@ -85,3 +85,42 @@ def test_log_marginal_likelihood_matches_sklearn(data_1d):
         theirs.log_marginal_likelihood(),   # no args: LML at the fixed theta
         atol=1e-6,
     )
+
+
+def test_fit_hyperparameters_improves_lml_within_bounds():
+    rng = np.random.default_rng(7)
+    X = rng.uniform(size=(25, 1))
+    y = np.sin(6 * X).ravel() + 0.1 * rng.standard_normal(25)
+    y = (y - y.mean()) / y.std()
+
+    gp = GaussianProcess(RBFKernel(length_scale=5.0, signal_variance=0.1), 0.5)
+    gp.fit(X, y)
+    lml_before = gp.log_marginal_likelihood()
+
+    gp.fit_hyperparameters(rng=np.random.default_rng(0))
+    lml_after = gp.log_marginal_likelihood()
+
+    assert lml_after >= lml_before - 1e-8
+    from gpbo.gp import DEFAULT_HP_BOUNDS
+    lo, hi = np.exp(DEFAULT_HP_BOUNDS[:, 0]), np.exp(DEFAULT_HP_BOUNDS[:, 1])
+    theta = np.array(
+        [gp.kernel.length_scale, gp.kernel.signal_variance, gp.noise_variance]
+    )
+    assert np.all(np.isfinite(theta))
+    assert np.all(theta >= lo * (1 - 1e-9)) and np.all(theta <= hi * (1 + 1e-9))
+
+
+def test_fit_hyperparameters_is_deterministic_given_rng():
+    rng = np.random.default_rng(7)
+    X = rng.uniform(size=(15, 1))
+    y = np.sin(6 * X).ravel()
+
+    results = []
+    for _ in range(2):
+        gp = GaussianProcess(RBFKernel(1.0, 1.0), 0.01)
+        gp.fit(X, y)
+        gp.fit_hyperparameters(rng=np.random.default_rng(3))
+        results.append(
+            (gp.kernel.length_scale, gp.kernel.signal_variance, gp.noise_variance)
+        )
+    assert results[0] == results[1]
