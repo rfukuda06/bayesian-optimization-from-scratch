@@ -50,6 +50,8 @@ def build_cv_objective(X, y, model_factory, param_names, cv,
     delegates to the estimator's default scorer; any sklearn scoring string or
     scorer is passed straight through.
     """
+    param_names = tuple(param_names)   # freeze order; caller mutations must not remap dimensions
+
     def objective(x):
         params = decode_parameters(x, param_names)
         model = model_factory(params)
