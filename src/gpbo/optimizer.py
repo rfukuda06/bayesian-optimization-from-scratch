@@ -1,7 +1,7 @@
 """Bayesian optimization loop and acquisition maximization.
 
 All functions here operate in the unit box [0,1]^d with standardized y;
-BayesianOptimizer (Task 9) owns the mapping to and from original units.
+BayesianOptimizer owns the mapping to and from original units.
 """
 
 import numpy as np
