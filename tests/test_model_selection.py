@@ -1,9 +1,15 @@
 import numpy as np
+import pytest
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
-from gpbo.model_selection import build_cv_objective, decode_parameters
+from gpbo.model_selection import (
+    TuningResult,
+    build_cv_objective,
+    decode_parameters,
+    tune_model,
+)
 
 X_SMALL, Y_SMALL = make_classification(
     n_samples=80, n_features=6, n_informative=4, random_state=0
@@ -43,3 +49,51 @@ def test_objective_is_deterministic_for_same_x():
     )
     x = np.array([0.3])
     assert objective(x) == objective(x)
+
+
+def test_tune_model_stays_within_bounds():
+    result = tune_model(
+        X_SMALL, Y_SMALL, model_factory=_logreg_factory,
+        param_space={"log10_C": (-2.0, 2.0)}, cv=3, n_init=3, n_iter=3, seed=0,
+    )
+    assert -2.0 <= result.best_params["log10_C"] <= 2.0
+    X_evals = result.optimization_result.X
+    assert np.all((X_evals >= -2.0) & (X_evals <= 2.0))
+
+
+def test_tune_model_same_seed_reproducible():
+    kwargs = dict(
+        model_factory=_logreg_factory, param_space={"log10_C": (-2.0, 2.0)},
+        cv=3, n_init=3, n_iter=3, seed=1,
+    )
+    r1 = tune_model(X_SMALL, Y_SMALL, **kwargs)
+    r2 = tune_model(X_SMALL, Y_SMALL, **kwargs)
+    np.testing.assert_array_equal(
+        r1.optimization_result.X, r2.optimization_result.X
+    )
+    np.testing.assert_array_equal(
+        r1.optimization_result.y, r2.optimization_result.y
+    )
+
+
+def test_tune_model_end_to_end_smoke():
+    result = tune_model(
+        X_SMALL, Y_SMALL, model_factory=_logreg_factory,
+        param_space={"log10_C": (-2.0, 2.0)}, cv=3, n_init=3, n_iter=3, seed=0,
+    )
+    assert isinstance(result, TuningResult)
+    opt = result.optimization_result
+    assert result.best_cv_score == opt.y.max()
+    assert result.best_params == decode_parameters(opt.best_x, ("log10_C",))
+    assert opt.X.shape == (6, 1)   # n_init + n_iter evaluations
+
+
+def test_validation_errors():
+    with pytest.raises(ValueError):
+        tune_model(X_SMALL, Y_SMALL, model_factory=_logreg_factory,
+                   param_space={})
+    with pytest.raises(ValueError):
+        tune_model(X_SMALL, Y_SMALL, model_factory=_logreg_factory,
+                   param_space={"log10_C": (2.0, -2.0)})
+    with pytest.raises(ValueError):
+        decode_parameters(np.array([1.0, 2.0]), ("only_one",))

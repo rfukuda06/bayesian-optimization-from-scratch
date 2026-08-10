@@ -22,8 +22,12 @@ Design notes, in the spirit of the rest of the package:
   use one of sklearn's negated scorers (e.g. scoring="neg_mean_squared_error").
 """
 
+from dataclasses import dataclass
+
 import numpy as np
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+from gpbo.optimizer import BayesianOptimizer, OptimizationResult
 
 
 def decode_parameters(x, param_names) -> dict:
@@ -60,3 +64,51 @@ def build_cv_objective(X, y, model_factory, param_names, cv,
         ).mean()
 
     return objective
+
+
+@dataclass
+class TuningResult:
+    """Best hyperparameters by name, their CV score, and the full BO history."""
+
+    best_params: dict
+    best_cv_score: float
+    optimization_result: OptimizationResult
+
+
+def tune_model(X, y, model_factory, param_space, scoring=None, cv=5,
+               n_init=5, n_iter=20, seed=0, n_jobs=None) -> TuningResult:
+    """Tune `model_factory`'s hyperparameters over `param_space` with BO.
+
+    `param_space` maps names to continuous (lo, hi) bounds, e.g.
+    {"log10_C": (-3.0, 3.0)}; its insertion order defines the optimizer's
+    dimension order. The factory receives {name: float} and returns a fresh
+    unfitted estimator (a Pipeline counts) — transforms like C = 10**log10_C
+    live there, not here.
+
+    `cv` as an int becomes StratifiedKFold(cv, shuffle=True, random_state=seed)
+    — a classification default whose folds are tied to `seed`. To hold folds
+    fixed while varying `seed` (as experiments/hyperparameter_tuning.py does
+    across its trials), pass an explicit splitter instead; regression callers
+    pass e.g. KFold. `n_init`/`n_iter` mirror BayesianOptimizer.run: n_init
+    random evaluations, then n_iter EI-guided ones.
+    """
+    if not param_space:
+        raise ValueError("param_space must contain at least one parameter")
+    for name, (lo, hi) in param_space.items():
+        if not lo < hi:
+            raise ValueError(
+                f"bounds for {name!r} must satisfy lo < hi, got ({lo}, {hi})"
+            )
+    names = tuple(param_space)
+    bounds = np.array([param_space[n] for n in names], dtype=float)
+    if isinstance(cv, int):
+        cv = StratifiedKFold(n_splits=cv, shuffle=True, random_state=seed)
+    objective = build_cv_objective(
+        X, y, model_factory, names, cv, scoring=scoring, n_jobs=n_jobs
+    )
+    result = BayesianOptimizer(objective, bounds).run(n_init, n_iter, seed=seed)
+    return TuningResult(
+        best_params=decode_parameters(result.best_x, names),
+        best_cv_score=result.best_y,
+        optimization_result=result,
+    )
