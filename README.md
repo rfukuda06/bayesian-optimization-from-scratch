@@ -20,6 +20,8 @@ A joint Gaussian over function values, with covariance supplied by the RBF kerne
 
 ## Results
 
+Three experiments illustrate the pipeline end to end: GP regression on a toy function, BO on synthetic objectives, and real SVM hyperparameter tuning.
+
 ### GP regression
 
 Prior samples, then the posterior after 3 and 8 noisy observations of `f(x) = x sin(x)`, with hyperparameters fitted by maximizing the LML. The `±2σ` band collapses near data and widens back to the prior away from it.
@@ -76,7 +78,7 @@ Delegated to the numerical libraries: dense linear algebra primitives (`scipy.li
 ## Correctness
 
 - **GP agreement with scikit-learn** — at fixed hyperparameters, our posterior mean, posterior std, and log marginal likelihood match `GaussianProcessRegressor` to `atol 1e-6`. Measured agreement is around `1e-9`; the demo script prints the live `max|Δmean|` and `max|Δstd|`.
-- **EI against Monte Carlo** — the closed-form EI is checked against the mean of `100,000` draws from `N(μ, σ²)` passed through `max(f - y_best - ξ, 0)`, agreeing to `rtol ~1e-2`.
+- **EI against Monte Carlo** — the closed-form EI is checked against the mean of `100,000` draws from `N(μ, σ²)` passed through `max(f - y_best - ξ, 0)`, agreeing to `rtol 2e-2`.
 
 ```
 $ uv run pytest
