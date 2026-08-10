@@ -72,6 +72,16 @@ class GaussianProcess:
         var = np.maximum(var, 1e-12)  # cancellation can go slightly negative
         return mean, np.sqrt(var)
 
+    def sample_posterior(self, X_star, n_samples, rng=None) -> np.ndarray:
+        """Draw functions from the posterior: f = mu + L_c z, z ~ N(0, I),
+        where L_c is the Cholesky factor of the posterior covariance."""
+        rng = np.random.default_rng() if rng is None else rng
+        mean, cov = self.predict(X_star, return_cov=True)
+        m = len(mean)
+        L_c = cholesky(cov + 1e-10 * np.eye(m), lower=True)
+        z = rng.standard_normal((m, n_samples))
+        return (mean[:, None] + L_c @ z).T
+
     def log_marginal_likelihood(self) -> float:
         """log p(y | X, theta) = -1/2 y^T alpha - sum(log L_ii) - n/2 log(2 pi).
 
