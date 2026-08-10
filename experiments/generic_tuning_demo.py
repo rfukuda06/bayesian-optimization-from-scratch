@@ -47,7 +47,7 @@ def main():
     )
 
     # Untuned baseline on the SAME folds tune_model used internally
-    # (cv=5 int with seed=0 -> StratifiedKFold(5, shuffle=True, random_state=0)).
+    # (cv=5 int with seed=0 -> StratifiedKFold(n_splits=5, shuffle=True, random_state=0)).
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
     baseline = cross_val_score(make_model({"log10_C": 0.0}), X, y, cv=cv).mean()
 
@@ -62,7 +62,7 @@ def main():
     ax.axhline(baseline, color="C1", ls="--", lw=1.5,
                label="untuned baseline (C=1)")
     ax.set_xlabel("evaluations")
-    ax.set_ylabel("mean 5-fold CV accuracy")
+    ax.set_ylabel("best 5-fold CV accuracy so far")
     ax.set_title("Tuning log₁₀C of a scaled logistic regression (breast_cancer)")
     ax.legend(loc="lower right")
     fig.tight_layout()
