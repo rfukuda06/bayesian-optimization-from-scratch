@@ -84,6 +84,10 @@ result.best_cv_score    # mean CV accuracy of the best configuration
 
 The factory owns transforms like `C = 10**log10_C`, so BO searches a well-scaled space; the CV folds stay fixed for the whole run, which keeps the objective deterministic. The digits benchmark above runs through the same adapter (`build_cv_objective`), and `experiments/generic_tuning_demo.py` repeats the exercise on `breast_cancer` with a scaled logistic regression — different dataset, different estimator type, zero optimizer changes. Search dimensions are continuous floats only (no categorical or conditional parameters), and the caller prepares `X, y`.
 
+On the committed run (seed 0) the tuned model reaches `0.9824` mean 5-fold CV accuracy at `C = 10^-0.35`, against the untuned `C = 1` baseline's `0.9789`:
+
+![Reusable tuning demo](figures/generic_tuning_demo.png)
+
 ## What is implemented from scratch
 
 - **RBF kernel** — `k(x, x') = σ_f² exp(-‖x - x'‖² / 2ℓ²)`, with the squared-distance expansion done without an `(n, m, d)` intermediate (`src/gpbo/kernels.py`).
