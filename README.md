@@ -65,6 +65,25 @@ RS best config: C=10^0.34, gamma=10^-0.60  -> held-out test accuracy 0.9889
 
 ![Where BO samples](figures/hp_landscape.png)
 
+## Reusable model tuning
+
+Nothing in the optimizer is tied to digits or SVMs — the core maximizes an arbitrary `objective(x)` over a box. A small adapter (`src/gpbo/model_selection.py`) turns a dataset, an estimator factory, a parameter space, and a CV scheme into exactly such an objective, so the same GP/Expected-Improvement stack tunes any scikit-learn estimator:
+
+```python
+from gpbo import tune_model
+
+def make_model(params):
+    return Pipeline([("scale", StandardScaler()),
+                     ("logreg", LogisticRegression(C=10.0 ** params["log10_C"], max_iter=1000))])
+
+result = tune_model(X, y, model_factory=make_model,
+                    param_space={"log10_C": (-4.0, 4.0)}, seed=0)
+result.best_params      # {"log10_C": ...}
+result.best_cv_score    # mean CV accuracy of the best configuration
+```
+
+The factory owns transforms like `C = 10**log10_C`, so BO searches a well-scaled space; the CV folds stay fixed for the whole run, which keeps the objective deterministic. The digits benchmark above runs through the same adapter (`build_cv_objective`), and `experiments/generic_tuning_demo.py` repeats the exercise on `breast_cancer` with a scaled logistic regression — different dataset, different estimator type, zero optimizer changes. Search dimensions are continuous floats only (no categorical or conditional parameters), and the caller prepares `X, y`.
+
 ## What is implemented from scratch
 
 - **RBF kernel** — `k(x, x') = σ_f² exp(-‖x - x'‖² / 2ℓ²)`, with the squared-distance expansion done without an `(n, m, d)` intermediate (`src/gpbo/kernels.py`).
@@ -82,18 +101,19 @@ Delegated to the numerical libraries: dense linear algebra primitives (`scipy.li
 
 ```
 $ uv run pytest
-26 passed
+34 passed
 ```
 
 ## How to run
 
 ```bash
 uv sync                                             # create the env from pyproject / uv.lock
-uv run pytest                                       # 26 passed
+uv run pytest                                       # 34 passed
 
 uv run python experiments/gp_demo.py                # GP figures + agreement prints (seconds)
 uv run python experiments/synthetic_optimization.py # 1D frames, Branin figures (~1–2 min)
 uv run python experiments/hyperparameter_tuning.py  # BO vs RS on digits (~15–35 min first run)
+uv run python experiments/generic_tuning_demo.py    # reusable-tuning demo (<1 min)
 ```
 
 The hyperparameter experiment is slow on its first run because it computes a `20×20` ground-truth CV-accuracy grid for the landscape plot. That grid is cached to `data/digits_landscape.npz` (committed), so subsequent runs skip it and finish much faster.
