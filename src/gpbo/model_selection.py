@@ -23,6 +23,7 @@ Design notes, in the spirit of the rest of the package:
 """
 
 import numpy as np
+from sklearn.model_selection import cross_val_score
 
 
 def decode_parameters(x, param_names) -> dict:
@@ -37,3 +38,23 @@ def decode_parameters(x, param_names) -> dict:
     if len(x) != len(param_names):
         raise ValueError(f"got {len(x)} values for {len(param_names)} parameters")
     return {name: float(v) for name, v in zip(param_names, x)}
+
+
+def build_cv_objective(X, y, model_factory, param_names, cv,
+                       scoring=None, n_jobs=None):
+    """Return objective(x) -> mean CV score, ready for BayesianOptimizer.
+
+    `cv` is used exactly as given (anything `cross_val_score` accepts). Pass a
+    splitter with a fixed random_state to make the objective deterministic —
+    the module docstring explains why that matters for the GP. `scoring=None`
+    delegates to the estimator's default scorer; any sklearn scoring string or
+    scorer is passed straight through.
+    """
+    def objective(x):
+        params = decode_parameters(x, param_names)
+        model = model_factory(params)
+        return cross_val_score(
+            model, X, y, cv=cv, scoring=scoring, n_jobs=n_jobs
+        ).mean()
+
+    return objective
