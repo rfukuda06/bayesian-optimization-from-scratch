@@ -70,3 +70,18 @@ class GaussianProcess:
             var = var + self.noise_variance
         var = np.maximum(var, 1e-12)  # cancellation can go slightly negative
         return mean, np.sqrt(var)
+
+    def log_marginal_likelihood(self) -> float:
+        """log p(y | X, theta) = -1/2 y^T alpha - sum(log L_ii) - n/2 log(2 pi).
+
+        Term 1 rewards data fit, term 2 (which is 1/2 log|K|) penalizes model
+        complexity — maximizing this trades the two off automatically.
+        """
+        if self._L is None:
+            raise RuntimeError("Call fit() before log_marginal_likelihood().")
+        n = len(self._y)
+        return float(
+            -0.5 * self._y @ self._alpha
+            - np.sum(np.log(np.diag(self._L)))
+            - 0.5 * n * np.log(2.0 * np.pi)
+        )
