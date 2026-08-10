@@ -14,9 +14,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets import load_digits
-from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.svm import SVC
 
+from gpbo.model_selection import build_cv_objective
 from gpbo.optimizer import BayesianOptimizer
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -36,10 +37,14 @@ X_pool, X_test, y_pool, y_test = train_test_split(
 )
 
 
-def objective(params):
-    a, b = params
-    clf = SVC(C=10.0**a, gamma=10.0**b)
-    return cross_val_score(clf, X_pool, y_pool, cv=CV, n_jobs=-1).mean()
+def make_svc(params):
+    return SVC(C=10.0**params["log10_C"], gamma=10.0**params["log10_gamma"])
+
+
+objective = build_cv_objective(
+    X_pool, y_pool, model_factory=make_svc,
+    param_names=("log10_C", "log10_gamma"), cv=CV, n_jobs=-1,
+)
 
 
 def random_search(n_evals, seed):
