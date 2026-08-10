@@ -46,7 +46,11 @@ def _maximize_ei_candidates(gp, y_best, rng, d, n_candidates=2048, n_refine=5):
 
 def _apply_duplicate_guard(x, X_existing, rng):
     """If EI collapsed onto an already-sampled point, fall back to random
-    so the loop cannot stall re-evaluating the same location."""
+    so the loop cannot stall re-evaluating the same location.
+
+    Late in a converged 1D run this fires often (the grid argmax keeps
+    landing on the incumbent), so late proposals can look random-uniform —
+    that is expected behavior, not a bug."""
     if np.min(np.linalg.norm(X_existing - x, axis=1)) < 1e-6:
         return rng.uniform(size=x.shape[0])
     return x
@@ -57,8 +61,10 @@ class IterationRecord:
     X: np.ndarray          # observations so far, original units, (n_i, d)
     y: np.ndarray          # (n_i,)
     theta: tuple           # fitted (length_scale, signal_variance, noise_variance)
-    x_next: np.ndarray     # proposed point, original units, (d,)
-    ei_max: float          # EI value at the (pre-guard) proposal
+    x_next: np.ndarray     # point evaluated next (post-guard), original units, (d,)
+    ei_max: float          # EI at the pre-guard argmax; when the duplicate
+                           # guard fired, x_next is a random fallback and this
+                           # EI describes the replaced proposal, not x_next
 
 
 @dataclass
