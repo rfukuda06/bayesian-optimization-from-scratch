@@ -1,6 +1,14 @@
 # Gaussian Processes + Bayesian Optimization from scratch
 
-Gaussian process regression and Bayesian optimization implemented from the math up in NumPy and SciPy — RBF kernel, Cholesky-based posterior, log-marginal-likelihood hyperparameter fitting, and closed-form Expected Improvement. The stack is exposed as a small reusable interface, `tune_model`, that tunes the hyperparameters of any scikit-learn estimator on any dataset you provide. The GP is validated against scikit-learn's `GaussianProcessRegressor` to `atol 1e-6` (agreement measured at ~`1e-9`), the acquisition function against a Monte-Carlo estimate, and the tuning loop is benchmarked against random search on the digits dataset. This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
+Gaussian process regression and Bayesian optimization implemented from the math up in NumPy and SciPy. The whole stack is exposed as one reusable call, `tune_model`, which tunes the hyperparameters of any scikit-learn estimator on any dataset you provide. Every piece is validated — the GP against scikit-learn's, the acquisition function against a Monte-Carlo estimate, the optimizer against random search ([Correctness](#correctness) has the numbers). This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
+
+## Quick start
+
+```bash
+uv sync
+uv run pytest                                      # the full test suite, seconds
+uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, seconds
+```
 
 ## The pipeline
 
@@ -47,7 +55,16 @@ result.best_cv_score                     # best mean CV accuracy found
 result.optimization_result.best_so_far   # convergence curve, if you want to plot it
 ```
 
-Fitting the final model is yours: call your factory with `result.best_params` and train on your full training split — the library tunes, you deploy.
+The whole contract in one look:
+
+```text
+You provide   numeric X, y · a model_factory(params) -> estimator ·
+              param_space bounds · optionally cv, seed, scoring, n_init/n_iter
+You get back  TuningResult: .best_params, .best_cv_score,
+              .optimization_result (all evaluations + best-so-far curve)
+Still yours   the final fit — model_factory(result.best_params).fit(X, y) —
+              plotting, and holding out a test set beforehand
+```
 
 The division of labor is deliberate:
 
@@ -57,13 +74,30 @@ The division of labor is deliberate:
 - **Continuous knobs only.** Bounds are float ranges; categorical or conditional hyperparameters are out of scope.
 - The CV folds are fixed for the whole run, so the objective is deterministic; scores are maximized (use sklearn's `neg_*` scorers to minimize a loss).
 
-`experiments/generic_tuning_demo.py` is exactly this recipe run end to end on scikit-learn's `breast_cancer` dataset (569 tumor samples, 30 features) — to tune your own data, copy that file and swap the loading lines and the factory. It finishes in seconds: on the committed run (seed 0), tuning lifts a scaled logistic regression from the untuned `C = 1` baseline's `0.9789` mean 5-fold CV accuracy to `0.9824` at `C = 10^-0.35`:
+### A worked example: breast cancer
+
+The recipe above is not hypothetical — `experiments/generic_tuning_demo.py` is exactly that code run end to end on scikit-learn's built-in `breast_cancer` dataset (569 tumor samples, 30 numeric features, malignant/benign label). To tune your own data, copy that file and swap the loading lines and the factory. It finishes in seconds: on the committed run (seed 0), tuning lifts a scaled logistic regression from the untuned `C = 1` baseline's `0.9789` mean 5-fold CV accuracy to `0.9824` at `C = 10^-0.35`:
 
 ![Reusable tuning demo](figures/generic_tuning_demo.png)
 
+### Or hand it to your coding agent
+
+Prefer not to write the recipe yourself? Paste this to a coding agent running inside a clone of this repo, filling in the blanks:
+
+```text
+Read the "Tune your model on your data" section of this repo's README, and use
+experiments/generic_tuning_demo.py as the template.
+
+Write and run a script like that demo, but for my data: it lives at <PATH> and
+the target column is <NAME> — get it into the numeric X, y the library expects.
+Tune a <MODEL — or pick a sensible scikit-learn model for me>, searching
+<KNOBS AND RANGES — or pick 1–3 standard knobs, log-scaled where sensible>.
+At the end, refit the best model on all my data so I can use it.
+```
+
 ## The benchmark: BO vs random search on digits
 
-The demo above shows the interface; this experiment is the evidence that the optimizer underneath earns its keep. A single tuning run takes under a minute — this script runs **twenty** of them (10 seeds × {Bayesian optimization, random search} = 500 evaluations, all through the same `build_cv_objective` adapter), which is why it takes ~15 minutes: the point is a fair, seed-averaged comparison with error bars, not one lucky run.
+The demo above shows the interface; this experiment is the evidence that the optimizer underneath earns its keep. A single tuning run takes under a minute — this script runs **twenty** of them (10 seeds × {Bayesian optimization, random search} = 500 evaluations, all driven through `build_cv_objective`, the machinery layer underneath `tune_model`), which is why it takes ~15 minutes: the point is a fair, seed-averaged comparison with error bars, not one lucky run.
 
 Tuning `SVC(C, γ)` on scikit-learn's digits dataset. Search space is `log₁₀C ∈ [-3, 3]`, `log₁₀γ ∈ [-5, 1]`; the objective is mean 5-fold stratified CV accuracy on an 80% pool. Each method gets 25 evaluations per seed, averaged over 10 seeds. A held-out 20% test set is touched exactly once per method at the end.
 
@@ -127,7 +161,7 @@ Delegated to the numerical libraries: dense linear algebra primitives (`scipy.li
 
 ```
 $ uv run pytest
-34 passed
+37 passed
 ```
 
 ## How to run
