@@ -66,13 +66,25 @@ def build_cv_objective(X, y, model_factory, param_names, cv,
     return objective
 
 
-@dataclass
+@dataclass(repr=False)   # custom __repr__: the default would dump the arrays inside
 class TuningResult:
-    """Best hyperparameters by name, their CV score, and the full BO history."""
+    """What `tune_model` returns. Printing it shows the contract, not the arrays."""
 
-    best_params: dict
-    best_cv_score: float
-    optimization_result: OptimizationResult
+    best_params: dict                        # {name: float} — feed back into your factory
+    best_cv_score: float                     # mean CV score of best_params on the fixed folds
+    optimization_result: OptimizationResult  # every evaluation + the best-so-far curve
+
+    def __repr__(self) -> str:
+        n = len(self.optimization_result.y)
+        params = ", ".join(f"{k!r}: {v:.4g}" for k, v in self.best_params.items())
+        return "\n".join([
+            f"TuningResult  ({n} evaluations)",
+            f"  best_params      {{{params}}}",
+            f"  best_cv_score    {self.best_cv_score:.4f}",
+            "  also available   .optimization_result.best_so_far  (best score per evaluation)",
+            "                   .optimization_result.X, .y        (every config and score)",
+            "  next step        model_factory(result.best_params).fit(X, y)",
+        ])
 
 
 def tune_model(X, y, model_factory, param_space, scoring=None, cv=5,

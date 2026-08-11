@@ -10,6 +10,7 @@ from gpbo.model_selection import (
     decode_parameters,
     tune_model,
 )
+from gpbo.optimizer import OptimizationResult
 
 X_SMALL, Y_SMALL = make_classification(
     n_samples=80, n_features=6, n_informative=4, random_state=0
@@ -106,3 +107,37 @@ def test_public_api_exports():
     assert gpbo.TuningResult is TuningResult
     assert gpbo.build_cv_objective is build_cv_objective
     assert gpbo.decode_parameters is decode_parameters
+
+
+def _dummy_opt_result(n_evals, d, best_x, best_y, n_history):
+    return OptimizationResult(
+        X=np.zeros((n_evals, d)), y=np.zeros(n_evals), best_x=np.asarray(best_x),
+        best_y=best_y, best_so_far=np.zeros(n_evals), history=[None] * n_history,
+    )
+
+
+def test_tuning_result_repr_exact_brief():
+    result = TuningResult(
+        best_params={"log10_C": -0.35},
+        best_cv_score=0.9824,
+        optimization_result=_dummy_opt_result(25, 1, [-0.35], 0.9824, 20),
+    )
+    assert repr(result) == "\n".join([
+        "TuningResult  (25 evaluations)",
+        "  best_params      {'log10_C': -0.35}",
+        "  best_cv_score    0.9824",
+        "  also available   .optimization_result.best_so_far  (best score per evaluation)",
+        "                   .optimization_result.X, .y        (every config and score)",
+        "  next step        model_factory(result.best_params).fit(X, y)",
+    ])
+
+
+def test_repr_of_real_result_shows_count_and_no_arrays():
+    result = tune_model(
+        X_SMALL, Y_SMALL, model_factory=_logreg_factory,
+        param_space={"log10_C": (-2.0, 2.0)}, cv=3, n_init=3, n_iter=3, seed=0,
+    )
+    text = repr(result)
+    assert text.splitlines()[0] == "TuningResult  (6 evaluations)"
+    assert "array(" not in text
+    assert len(text.splitlines()) == 6
