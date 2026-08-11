@@ -91,18 +91,59 @@ def tune_model(X, y, model_factory, param_space, scoring=None, cv=5,
                n_init=5, n_iter=20, seed=0, n_jobs=None) -> TuningResult:
     """Tune `model_factory`'s hyperparameters over `param_space` with BO.
 
-    `param_space` maps names to continuous (lo, hi) bounds, e.g.
-    {"log10_C": (-3.0, 3.0)}; its insertion order defines the optimizer's
-    dimension order. The factory receives {name: float} and returns a fresh
-    unfitted estimator (a Pipeline counts) — transforms like C = 10**log10_C
-    live there, not here.
+    Builds a deterministic cross-validation objective from (X, y), maximizes
+    it with the GP/Expected-Improvement optimizer, and returns everything it
+    learned. This function only tunes: printing, plotting, and the final fit
+    are the caller-side lines shown in the example.
 
-    `cv` as an int becomes StratifiedKFold(cv, shuffle=True, random_state=seed)
-    — a classification default whose folds are tied to `seed`. To hold folds
-    fixed while varying `seed` (as experiments/hyperparameter_tuning.py does
-    across its trials), pass an explicit splitter instead; regression callers
-    pass e.g. KFold. `n_init`/`n_iter` mirror BayesianOptimizer.run: n_init
-    random evaluations, then n_iter EI-guided ones.
+    Parameters
+    ----------
+    X, y : array-like
+        Training data, already numeric. Cleaning, encoding, and feature
+        scaling belong to the caller (put scalers inside the factory's
+        Pipeline).
+    model_factory : callable
+        `model_factory(params: dict) -> unfitted estimator` (a Pipeline
+        counts). Receives {name: float}; transforms like C = 10**log10_C
+        live there, not here.
+    param_space : dict
+        Names to continuous (lo, hi) float bounds, e.g.
+        {"log10_C": (-3.0, 3.0)}. Insertion order defines the optimizer's
+        dimension order (guaranteed for dicts since Python 3.7).
+    scoring : str or callable, optional
+        Anything sklearn's cross_val_score accepts; None uses the
+        estimator's default scorer. Scores are MAXIMIZED — minimize a loss
+        via a negated scorer (e.g. scoring="neg_mean_squared_error").
+    cv : int or splitter, default 5
+        An int becomes StratifiedKFold(cv, shuffle=True, random_state=seed),
+        a classification default whose folds are tied to `seed`. To hold
+        folds fixed while varying `seed` (as experiments/hyperparameter_tuning.py
+        does across trials), pass an explicit splitter; regression callers
+        pass e.g. KFold. Folds are fixed for the whole run so the objective
+        is deterministic.
+    n_init, n_iter : int, default 5 and 20
+        Mirror BayesianOptimizer.run: n_init random evaluations, then
+        n_iter EI-guided ones.
+    seed : int, default 0
+        Seeds the folds (int `cv` only) and the optimizer. Same inputs and
+        seed give identical results; a stochastic estimator must also pin
+        its own random_state inside the factory.
+    n_jobs : int, optional
+        Passed through to cross_val_score for fold parallelism.
+
+    Returns
+    -------
+    TuningResult
+        .best_params          {name: float} — feed back into your factory
+        .best_cv_score        best mean CV score found
+        .optimization_result  every evaluation: .X, .y, .best_so_far
+                              (convergence curve), .history
+
+    Example
+    -------
+    >>> result = tune_model(X, y, make_model, {"log10_C": (-4.0, 4.0)})
+    >>> model = make_model(result.best_params).fit(X, y)   # the final fit is yours
+    >>> plt.plot(result.optimization_result.best_so_far)   # so is the plot
     """
     if not param_space:
         raise ValueError("param_space must contain at least one parameter")
