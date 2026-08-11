@@ -134,7 +134,7 @@ $ uv run pytest
 
 ```bash
 uv sync                                             # create the env from pyproject / uv.lock
-uv run pytest                                       # 34 passed
+uv run pytest
 
 uv run python experiments/gp_demo.py                # GP figures + agreement prints (seconds)
 uv run python experiments/synthetic_optimization.py # 1D frames, Branin figures (~1–2 min)
