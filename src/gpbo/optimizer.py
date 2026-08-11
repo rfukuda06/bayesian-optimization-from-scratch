@@ -67,7 +67,7 @@ class IterationRecord:
                            # EI describes the replaced proposal, not x_next
 
 
-@dataclass
+@dataclass(repr=False)   # custom __repr__: the default would dump the arrays
 class OptimizationResult:
     X: np.ndarray          # all evaluated points, original units, (n, d)
     y: np.ndarray          # (n,)
@@ -75,6 +75,13 @@ class OptimizationResult:
     best_y: float
     best_so_far: np.ndarray
     history: list          # list[IterationRecord], one per BO iteration
+
+    def __repr__(self) -> str:
+        n, d = self.X.shape
+        return (
+            f"OptimizationResult(n={n}, d={d}, best_y={self.best_y:.4f}; "
+            f"arrays: X, y, best_so_far; history: {len(self.history)} iterations)"
+        )
 
 
 class BayesianOptimizer:

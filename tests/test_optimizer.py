@@ -1,6 +1,7 @@
 import numpy as np
 
 from gpbo.optimizer import (
+    OptimizationResult,
     _apply_duplicate_guard,
     _maximize_ei_candidates,
     _maximize_ei_grid,
@@ -79,3 +80,18 @@ def test_result_structure():
     rec = result.history[0]
     assert rec.X.shape == (3, 1) and rec.x_next.shape == (1,)
     assert len(rec.theta) == 3 and rec.ei_max >= 0
+
+
+def test_optimization_result_repr_is_a_summary_not_an_array_dump():
+    result = OptimizationResult(
+        X=np.zeros((25, 2)),
+        y=np.zeros(25),
+        best_x=np.array([0.38, -0.91]),
+        best_y=0.9876,
+        best_so_far=np.zeros(25),
+        history=[None] * 20,
+    )
+    assert repr(result) == (
+        "OptimizationResult(n=25, d=2, best_y=0.9876; "
+        "arrays: X, y, best_so_far; history: 20 iterations)"
+    )
