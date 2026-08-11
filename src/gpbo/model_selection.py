@@ -40,7 +40,7 @@ def decode_parameters(x, param_names) -> dict:
     """
     x = np.asarray(x, dtype=float).ravel()
     if len(x) != len(param_names):
-        raise ValueError(f"got {len(x)} values for {len(param_names)} parameters")
+        raise ValueError(f"x has {len(x)} values but param_names has {len(param_names)}")
     return {name: float(v) for name, v in zip(param_names, x)}
 
 
@@ -101,8 +101,9 @@ def tune_model(X, y, model_factory, param_space, scoring=None, cv=5,
             )
     names = tuple(param_space)
     bounds = np.array([param_space[n] for n in names], dtype=float)
-    if isinstance(cv, int):
-        cv = StratifiedKFold(n_splits=cv, shuffle=True, random_state=seed)
+    # covers plain and NumPy ints; bool is an int subclass we don't want to treat as one
+    if isinstance(cv, (int, np.integer)) and not isinstance(cv, bool):
+        cv = StratifiedKFold(n_splits=int(cv), shuffle=True, random_state=seed)
     objective = build_cv_objective(
         X, y, model_factory, names, cv, scoring=scoring, n_jobs=n_jobs
     )
