@@ -1,6 +1,6 @@
 # Gaussian Processes + Bayesian Optimization from scratch
 
-Gaussian process regression and Bayesian optimization implemented from the math up in NumPy and SciPy — RBF kernel, Cholesky-based posterior, log-marginal-likelihood hyperparameter fitting, and closed-form Expected Improvement. The GP is validated against scikit-learn's `GaussianProcessRegressor` to `atol 1e-6` (agreement measured at ~`1e-9`), the acquisition function against a Monte-Carlo estimate, and the whole stack is put to work tuning an SVM's hyperparameters on the digits dataset. This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
+Gaussian process regression and Bayesian optimization implemented from the math up in NumPy and SciPy — RBF kernel, Cholesky-based posterior, log-marginal-likelihood hyperparameter fitting, and closed-form Expected Improvement. The stack is exposed as a small reusable interface, `tune_model`, that tunes the hyperparameters of any scikit-learn estimator on any dataset you provide. The GP is validated against scikit-learn's `GaussianProcessRegressor` to `atol 1e-6` (agreement measured at ~`1e-9`), the acquisition function against a Monte-Carlo estimate, and the tuning loop is benchmarked against random search on the digits dataset. This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
 
 ## The pipeline
 
@@ -18,31 +18,52 @@ flowchart LR
 
 A joint Gaussian over function values, with covariance supplied by the RBF kernel, is the prior. Conditioning on observations gives the posterior mean and variance. Fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance; the BO loop repeatedly maximizes it, evaluates the objective there, and refits. The final experiment points that loop at a real hyperparameter search and compares it to random search.
 
-## Results
+## Tune your model on your data
 
-Three experiments illustrate the pipeline end to end: GP regression on a toy function, BO on synthetic objectives, and real SVM hyperparameter tuning.
+The optimizer is not tied to any dataset or model. You bring three things — your data as numeric arrays, a factory that builds your estimator, and bounds for the knobs you want tuned — and `tune_model` does the rest: a small adapter (`src/gpbo/model_selection.py`) turns fixed-fold cross-validation into a black-box objective, and the GP/Expected-Improvement loop spends 25 evaluations (by default) finding the best settings.
 
-### GP regression
+```python
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
-Prior samples, then the posterior after 3 and 8 noisy observations of `f(x) = x sin(x)`, with hyperparameters fitted by maximizing the LML. The `±2σ` band collapses near data and widens back to the prior away from it.
+from gpbo import tune_model
 
-![GP prior and posterior](figures/gp_demo.png)
+df = pd.read_csv("my_data.csv")                    # any dataset you have prepared
+X = df.drop(columns="outcome").values
+y = df["outcome"].values
 
-### 1D Bayesian optimization
+def make_model(params):                            # you choose the estimator...
+    return Pipeline([("scale", StandardScaler()),
+                     ("logreg", LogisticRegression(C=10.0 ** params["log10_C"], max_iter=1000))])
 
-Two frames from a 12-iteration run maximizing `-sin(3x) - x² + 0.7x`. Top panel: true objective, GP mean, `±2σ`, samples so far, and the next point (red). Bottom panel: the EI surface whose argmax picks that next point. Early on EI probes the uncertain regions; by the late frame the posterior has locked onto the optimum and EI has flattened.
+result = tune_model(X, y, model_factory=make_model,
+                    param_space={"log10_C": (-4.0, 4.0)},   # ...and which knobs to search
+                    cv=5, seed=0)
 
-| Iteration 1 (early) | Iteration 12 (late) |
-|---|---|
-| ![BO iteration 1](figures/bo_1d_iter_01.png) | ![BO iteration 12](figures/bo_1d_iter_12.png) |
+result.best_params                       # {"log10_C": -0.35} — plug back into your factory
+result.best_cv_score                     # best mean CV accuracy found
+result.optimization_result.best_so_far   # convergence curve, if you want to plot it
+```
 
-### 2D Bayesian optimization (Branin)
+Fitting the final model is yours: call your factory with `result.best_params` and train on your full training split — the library tunes, you deploy.
 
-Sample placement over the Branin function (three global minima). The optimizer concentrates its evaluations in one minimum's basin. On the committed seed-0 run it reached a best value of `1.038` against the true global minimum of `0.398`; other seeds landed in the `0.46`–`0.72` range. The figure shows honest basin concentration, not an exact hit on the global minimum.
+The division of labor is deliberate:
 
-![Branin sample sequence](figures/bo_branin_samples.png)
+- **You choose the model.** Any scikit-learn estimator works (a `Pipeline` counts); the library never auto-selects a model type. Comparing, say, an SVM against a random forest means two `tune_model` calls and two scores — this is a tuning library, not AutoML.
+- **You own the transforms.** Searching `log10_C` and applying `10**x` inside the factory keeps the GP modeling a well-scaled space.
+- **You prepare the data.** `X, y` must already be numeric arrays; there is no CSV cleaning, encoding, or missing-value handling here.
+- **Continuous knobs only.** Bounds are float ranges; categorical or conditional hyperparameters are out of scope.
+- The CV folds are fixed for the whole run, so the objective is deterministic; scores are maximized (use sklearn's `neg_*` scorers to minimize a loss).
 
-### Hyperparameter tuning: BO vs random search
+`experiments/generic_tuning_demo.py` is exactly this recipe run end to end on scikit-learn's `breast_cancer` dataset (569 tumor samples, 30 features) — to tune your own data, copy that file and swap the loading lines and the factory. It finishes in seconds: on the committed run (seed 0), tuning lifts a scaled logistic regression from the untuned `C = 1` baseline's `0.9789` mean 5-fold CV accuracy to `0.9824` at `C = 10^-0.35`:
+
+![Reusable tuning demo](figures/generic_tuning_demo.png)
+
+## The benchmark: BO vs random search on digits
+
+The demo above shows the interface; this experiment is the evidence that the optimizer underneath earns its keep. A single tuning run takes under a minute — this script runs **twenty** of them (10 seeds × {Bayesian optimization, random search} = 500 evaluations, all through the same `build_cv_objective` adapter), which is why it takes ~15 minutes: the point is a fair, seed-averaged comparison with error bars, not one lucky run.
 
 Tuning `SVC(C, γ)` on scikit-learn's digits dataset. Search space is `log₁₀C ∈ [-3, 3]`, `log₁₀γ ∈ [-5, 1]`; the objective is mean 5-fold stratified CV accuracy on an 80% pool. Each method gets 25 evaluations per seed, averaged over 10 seeds. A held-out 20% test set is touched exactly once per method at the end.
 
@@ -65,28 +86,29 @@ RS best config: C=10^0.34, gamma=10^-0.60  -> held-out test accuracy 0.9889
 
 ![Where BO samples](figures/hp_landscape.png)
 
-## Reusable model tuning
+## Under the hood: GP regression and synthetic BO
 
-Nothing in the optimizer is tied to digits or SVMs — the core maximizes an arbitrary `objective(x)` over a box. A small adapter (`src/gpbo/model_selection.py`) turns a dataset, an estimator factory, a parameter space, and a CV scheme into exactly such an objective, so the same GP/Expected-Improvement stack tunes any scikit-learn estimator:
+Before any real tuning, the building blocks are exercised on problems where the truth is known: GP regression on a toy function, then BO on synthetic objectives.
 
-```python
-from gpbo import tune_model
+### GP regression
 
-def make_model(params):
-    return Pipeline([("scale", StandardScaler()),
-                     ("logreg", LogisticRegression(C=10.0 ** params["log10_C"], max_iter=1000))])
+Prior samples, then the posterior after 3 and 8 noisy observations of `f(x) = x sin(x)`, with hyperparameters fitted by maximizing the LML. The `±2σ` band collapses near data and widens back to the prior away from it.
 
-result = tune_model(X, y, model_factory=make_model,
-                    param_space={"log10_C": (-4.0, 4.0)}, seed=0)
-result.best_params      # {"log10_C": ...}
-result.best_cv_score    # mean CV accuracy of the best configuration
-```
+![GP prior and posterior](figures/gp_demo.png)
 
-The factory owns transforms like `C = 10**log10_C`, so BO searches a well-scaled space; the CV folds stay fixed for the whole run, which keeps the objective deterministic. The digits benchmark above runs through the same adapter (`build_cv_objective`), and `experiments/generic_tuning_demo.py` repeats the exercise on `breast_cancer` with a scaled logistic regression — different dataset, different estimator type, zero optimizer changes. Search dimensions are continuous floats only (no categorical or conditional parameters), and the caller prepares `X, y`.
+### 1D Bayesian optimization
 
-On the committed run (seed 0) the tuned model reaches `0.9824` mean 5-fold CV accuracy at `C = 10^-0.35`, against the untuned `C = 1` baseline's `0.9789`:
+Two frames from a 12-iteration run maximizing `-sin(3x) - x² + 0.7x`. Top panel: true objective, GP mean, `±2σ`, samples so far, and the next point (red). Bottom panel: the EI surface whose argmax picks that next point. Early on EI probes the uncertain regions; by the late frame the posterior has locked onto the optimum and EI has flattened.
 
-![Reusable tuning demo](figures/generic_tuning_demo.png)
+| Iteration 1 (early) | Iteration 12 (late) |
+|---|---|
+| ![BO iteration 1](figures/bo_1d_iter_01.png) | ![BO iteration 12](figures/bo_1d_iter_12.png) |
+
+### 2D Bayesian optimization (Branin)
+
+Sample placement over the Branin function (three global minima). The optimizer concentrates its evaluations in one minimum's basin. On the committed seed-0 run it reached a best value of `1.038` against the true global minimum of `0.398`; other seeds landed in the `0.46`–`0.72` range. The figure shows honest basin concentration, not an exact hit on the global minimum.
+
+![Branin sample sequence](figures/bo_branin_samples.png)
 
 ## What is implemented from scratch
 
