@@ -2,6 +2,14 @@
 
 Gaussian process regression and Bayesian optimization implemented from the math up in NumPy and SciPy. The whole stack is exposed as one reusable call, `tune_model`, which tunes the hyperparameters of any scikit-learn estimator on any dataset you provide. Every piece is validated — the GP against scikit-learn's, the acquisition function against a Monte-Carlo estimate, the optimizer against random search ([Correctness](#correctness) and [the benchmark](#the-benchmark-bo-vs-random-search-on-digits) have the numbers). This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
 
+## Quick start
+
+```bash
+uv sync
+uv run pytest                                      # the full test suite, seconds
+uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, seconds
+```
+
 ## The pipeline
 
 ```mermaid
@@ -156,14 +164,6 @@ Delegated to the numerical libraries: dense linear algebra primitives (`scipy.li
 ```
 $ uv run pytest
 37 passed
-```
-
-## Quick start
-
-```bash
-uv sync
-uv run pytest                                      # the full test suite, seconds
-uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, seconds
 ```
 
 ## Limitations
