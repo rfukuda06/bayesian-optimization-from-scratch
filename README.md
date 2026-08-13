@@ -6,7 +6,7 @@ Gaussian process regression and Bayesian optimization implemented from the math 
 
 ![The pipeline: from Gaussians to a tuned SVM](figures/pipeline.svg)
 
-A joint Gaussian over function values, with covariance supplied by the RBF kernel, is the prior. Conditioning on observations gives the posterior mean and variance. Fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance; the BO loop repeatedly maximizes it, evaluates the objective there, and refits. The final experiment points that loop at a real hyperparameter search and compares it to random search.
+The prior is a joint Gaussian over function values, with covariance supplied by the RBF kernel. Conditioning on observations gives the posterior mean and variance, and fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance; the BO loop repeatedly maximizes that score, evaluates the objective at the chosen point, and refits. The final experiment applies the loop to a real hyperparameter search and compares it to random search.
 
 ## Usage
 
