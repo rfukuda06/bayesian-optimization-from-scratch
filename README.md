@@ -20,22 +20,24 @@ from sklearn.preprocessing import StandardScaler
 
 from gpbo import tune_model
 
-df = pd.read_csv("my_data.csv")                    # any prepared dataset
-X = df.drop(columns="outcome").values
+df = pd.read_csv("my_data.csv")                    # (1) the dataset and its
+X = df.drop(columns="outcome").values              #     target column
 y = df["outcome"].values
 
-def make_model(params):                            # the estimator to tune...
+def make_model(params):                            # (2) the estimator to tune
     return Pipeline([("scale", StandardScaler()),
                      ("logreg", LogisticRegression(C=10.0 ** params["log10_C"], max_iter=1000))])
 
 result = tune_model(X, y, model_factory=make_model,
-                    param_space={"log10_C": (-4.0, 4.0)},   # ...and the bounds to search
+                    param_space={"log10_C": (-4.0, 4.0)},   # (3) the bounds to search
                     cv=5, seed=0)
 
 result.best_params                       # {"log10_C": -0.35}; pass back into the factory
 result.best_cv_score                     # best mean CV accuracy found
 result.optimization_result.best_so_far   # best-so-far curve, for plotting
 ```
+
+Adapting the snippet to another dataset means changing the three numbered parts: (1) the loading lines, which must produce numeric `X, y` arrays; (2) the factory, which can build any scikit-learn estimator from `params`; and (3) `param_space`, the bounds searched for each parameter. The remaining lines stay the same.
 
 Interface summary:
 
@@ -60,24 +62,9 @@ Scope and requirements:
 
 ### A worked example: breast cancer
 
-`experiments/generic_tuning_demo.py` is the code above run end to end on scikit-learn's built-in `breast_cancer` dataset (569 tumor samples, 30 numeric features, malignant/benign label). To tune other data, copy that file and swap the loading lines and the factory. It finishes in seconds: on the committed run (seed 0), tuning raises a scaled logistic regression from the untuned `C = 1` baseline's `0.9789` mean 5-fold CV accuracy to `0.9824` at `C = 10^-0.35`:
+`experiments/generic_tuning_demo.py` is the code above run end to end on scikit-learn's built-in `breast_cancer` dataset (569 tumor samples, 30 numeric features, malignant/benign label). It finishes in seconds: on the committed run (seed 0), tuning raises a scaled logistic regression from the untuned `C = 1` baseline's `0.9789` mean 5-fold CV accuracy to `0.9824` at `C = 10^-0.35`:
 
 ![Reusable tuning demo](figures/generic_tuning_demo.png)
-
-### Generating the script with a coding agent
-
-Given to a coding agent running in a clone of this repository, the prompt below produces the script above for your dataset. Fill in the bracketed choices:
-
-```text
-Read the "Usage" section of this repo's README, and use
-experiments/generic_tuning_demo.py as the template.
-
-Write and run a script like that demo, but for my data: it lives at <PATH> and
-the target column is <NAME>; get it into the numeric X, y the library expects.
-Tune a <MODEL, or pick a sensible scikit-learn model for me>, searching
-<PARAMETERS AND RANGES, or pick 1–3 standard hyperparameters, log-scaled where sensible>.
-At the end, refit the best model on all my data so I can use it.
-```
 
 ## The benchmark: BO vs random search on digits
 
