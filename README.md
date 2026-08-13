@@ -176,5 +176,3 @@ uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, sec
 
 - Rasmussen & Williams, *Gaussian Processes for Machine Learning* (2006) — ch. 2 (regression, Cholesky prediction) and ch. 5 (model selection, marginal likelihood).
 - Bergstra & Bengio, *Random Search for Hyper-Parameter Optimization*, JMLR 13 (2012) — why random search is a strong baseline on spaces with low effective dimension.
-- [Design spec](docs/superpowers/specs/2026-08-09-gp-bayesian-optimization-design.md) — decisions, scope, and success criteria.
-- [Math walkthrough](docs/math-walkthrough.md) — every equation this library implements, derived end to end, each section pointing at the code that implements it.
