@@ -37,18 +37,18 @@ result.best_cv_score                     # best mean CV accuracy found
 result.optimization_result.best_so_far   # convergence curve, if you want to plot it
 ```
 
-The whole contract in one look:
+Interface summary:
 
 ```text
-You provide   numeric X, y · a model_factory(params) -> estimator ·
+Inputs        numeric X, y · a model_factory(params) -> estimator ·
               param_space bounds · optionally cv, seed, scoring, n_init/n_iter
-You get back  TuningResult: .best_params, .best_cv_score,
+Returns       TuningResult: .best_params, .best_cv_score,
               .optimization_result (all evaluations + best-so-far curve)
-Still yours   the final fit (model_factory(result.best_params).fit(X, y)),
+Caller-side   the final fit (model_factory(result.best_params).fit(X, y)),
               plotting, and holding out a test set beforehand
 ```
 
-The same data, choices, and seed reproduce an identical run; `print(result)` displays this contract.
+The same data, arguments, and seed reproduce an identical run; `print(result)` prints a summary of the result.
 
 Scope and requirements:
 
