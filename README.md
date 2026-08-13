@@ -171,3 +171,10 @@ uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, sec
 - **`O(n³)` scaling.** The Cholesky factorization is cubic in the number of observations, which is fine for the tens-to-hundreds of points a BO run accumulates but rules out large-`n` regression without sparse or inducing-point approximations.
 - **Low-dimensional scope.** Everything here is exercised in 1–3 dimensions. EI over a box gets progressively harder to maximize as dimension grows, and this repo does not implement the trust-region or high-dimensional acquisition machinery that addresses it.
 - **Noisy-EI caveat.** EI uses the best *observed* `y` as its incumbent. Under observation noise the true incumbent is uncertain, and plain EI can be over-optimistic; a noise-aware acquisition (e.g. expected improvement over the posterior mean, or knowledge gradient) would be the principled fix.
+
+## References
+
+- Rasmussen & Williams, *Gaussian Processes for Machine Learning* (2006) — ch. 2 (regression, Cholesky prediction) and ch. 5 (model selection, marginal likelihood).
+- Bergstra & Bengio, *Random Search for Hyper-Parameter Optimization*, JMLR 13 (2012) — why random search is a strong baseline on spaces with low effective dimension.
+- [Design spec](docs/superpowers/specs/2026-08-09-gp-bayesian-optimization-design.md) — decisions, scope, and success criteria.
+- [Math walkthrough](docs/math-walkthrough.md) — every equation this library implements, derived end to end, each section pointing at the code that implements it.
