@@ -2,14 +2,6 @@
 
 Gaussian process regression and Bayesian optimization implemented from the math up in NumPy and SciPy. The whole stack is exposed as one reusable call, `tune_model`, which tunes the hyperparameters of any scikit-learn estimator on any dataset you provide. Every piece is validated — the GP against scikit-learn's, the acquisition function against a Monte-Carlo estimate, the optimizer against random search ([Correctness](#correctness) and [the benchmark](#the-benchmark-bo-vs-random-search-on-digits) have the numbers). This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
 
-## Quick start
-
-```bash
-uv sync
-uv run pytest                                      # the full test suite, seconds
-uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, seconds
-```
-
 ## The pipeline
 
 ```mermaid
@@ -166,28 +158,16 @@ $ uv run pytest
 37 passed
 ```
 
-## Reproducing the results
-
-Every figure and number in this README comes from one of four scripts (setup is in [Quick start](#quick-start)):
+## Quick start
 
 ```bash
-uv run python experiments/gp_demo.py                # GP figures + agreement prints (seconds)
-uv run python experiments/synthetic_optimization.py # 1D frames, Branin figures (~1–2 min)
-uv run python experiments/hyperparameter_tuning.py  # BO vs RS on digits (~15–35 min first run)
-uv run python experiments/generic_tuning_demo.py    # reusable-tuning demo (<1 min)
+uv sync
+uv run pytest                                      # the full test suite, seconds
+uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, seconds
 ```
-
-The hyperparameter experiment is slow on its first run because it computes a `20×20` ground-truth CV-accuracy grid for the landscape plot. That grid is cached to `data/digits_landscape.npz` (committed), so subsequent runs skip it and finish much faster.
 
 ## Limitations
 
 - **`O(n³)` scaling.** The Cholesky factorization is cubic in the number of observations, which is fine for the tens-to-hundreds of points a BO run accumulates but rules out large-`n` regression without sparse or inducing-point approximations.
 - **Low-dimensional scope.** Everything here is exercised in 1–3 dimensions. EI over a box gets progressively harder to maximize as dimension grows, and this repo does not implement the trust-region or high-dimensional acquisition machinery that addresses it.
 - **Noisy-EI caveat.** EI uses the best *observed* `y` as its incumbent. Under observation noise the true incumbent is uncertain, and plain EI can be over-optimistic; a noise-aware acquisition (e.g. expected improvement over the posterior mean, or knowledge gradient) would be the principled fix.
-
-## References
-
-- Rasmussen & Williams, *Gaussian Processes for Machine Learning* (2006) — ch. 2 (regression, Cholesky prediction) and ch. 5 (model selection, marginal likelihood).
-- Bergstra & Bengio, *Random Search for Hyper-Parameter Optimization*, JMLR 13 (2012) — why random search is a strong baseline on spaces with low effective dimension.
-- [Design spec](docs/superpowers/specs/2026-08-09-gp-bayesian-optimization-design.md) — decisions, scope, and success criteria.
-- [Math walkthrough](docs/math-walkthrough.md) — every equation this library implements, derived end to end, each section pointing at the code that implements it.
