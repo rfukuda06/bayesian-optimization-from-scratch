@@ -10,25 +10,19 @@ uv run pytest                                      # the full test suite, second
 uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, seconds
 ```
 
-## The pipeline
+## The user flow
 
-```mermaid
-flowchart LR
-    A[Gaussians] --> B[RBF kernel]
-    B --> C[GP prior]
-    C -->|condition on data| D[GP posterior]
-    D -->|LML + L-BFGS-B| E[fit hyperparameters]
-    E --> F[Expected Improvement]
-    F --> G[BO loop]
-    G --> H[SVM tuning]
-    H --> I[vs random search]
-```
+A tuning run has three parts:
 
-A joint Gaussian over function values, with covariance supplied by the RBF kernel, is the prior. Conditioning on observations gives the posterior mean and variance. Fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance; the BO loop repeatedly maximizes it, evaluates the objective there, and refits. The final experiment points that loop at a real hyperparameter search and compares it to random search.
+1. **You provide** your data as numeric arrays `X, y`, a factory function that builds your scikit-learn model from a dict of parameter values, and `(lo, hi)` bounds for each parameter to search — plus, optionally, the run's settings: `cv`, `seed`, `scoring`, and the evaluation budget.
+2. **The library runs** the whole optimization. It freezes the cross-validation folds once, making the objective deterministic, then spends 25 evaluations (by default) — 5 random, then 20 chosen by the Gaussian-process/Expected-Improvement loop — searching the bounds for the best-scoring parameters.
+3. **You get back** the same three things on every run: `best_params` (the winning values, ready to pass back to your factory), `best_cv_score`, and the full optimization history, including the convergence curve. The same data, choices, and seed reproduce an identical run, and `print(result)` displays exactly this contract along with the next step to take.
 
-## Tune your model on your data
+Three steps remain the caller's after the run: training the final model — `model_factory(result.best_params).fit(X, y)` — plotting, and holding out a test set beforehand for an unbiased final measure.
 
-The optimizer is not tied to any dataset or model. You bring three things — your data as numeric arrays, a factory that builds your estimator, and bounds for the knobs you want tuned — and `tune_model` does the rest: a small adapter (`src/gpbo/model_selection.py`) turns fixed-fold cross-validation into a black-box objective, and the GP/Expected-Improvement loop spends 25 evaluations (by default) finding the best settings.
+## Usage
+
+The optimizer is not tied to any dataset or model. `tune_model` implements the flow above: a small adapter (`src/gpbo/model_selection.py`) turns fixed-fold cross-validation into a black-box objective for the GP/Expected-Improvement loop.
 
 ```python
 import pandas as pd
@@ -66,12 +60,12 @@ Still yours   the final fit — model_factory(result.best_params).fit(X, y) —
               plotting, and holding out a test set beforehand
 ```
 
-The division of labor is deliberate:
+Scope and requirements:
 
-- **You choose the model.** Any scikit-learn estimator works (a `Pipeline` counts); the library never auto-selects a model type. Comparing, say, an SVM against a random forest means two `tune_model` calls and two scores — this is a tuning library, not AutoML.
-- **You own the transforms.** Searching `log10_C` and applying `10**x` inside the factory keeps the GP modeling a well-scaled space.
-- **You prepare the data.** `X, y` must already be numeric arrays; there is no CSV cleaning, encoding, or missing-value handling here.
-- **Continuous knobs only.** Bounds are float ranges; categorical or conditional hyperparameters are out of scope.
+- Any scikit-learn estimator works (a `Pipeline` counts); the library does not select model types — comparing, say, an SVM against a random forest is two `tune_model` calls and two scores.
+- Parameter transforms such as `C = 10**log10_C` belong inside the factory, which keeps the GP searching a well-scaled space.
+- `X, y` must already be numeric arrays; there is no CSV parsing, encoding, or missing-value handling.
+- Bounds are continuous float ranges; categorical or conditional hyperparameters are out of scope.
 - The CV folds are fixed for the whole run, so the objective is deterministic; scores are maximized (use sklearn's `neg_*` scorers to minimize a loss).
 
 ### A worked example: breast cancer
@@ -80,9 +74,9 @@ The recipe above is not hypothetical — `experiments/generic_tuning_demo.py` is
 
 ![Reusable tuning demo](figures/generic_tuning_demo.png)
 
-### Or hand it to your coding agent
+### Generating the script with a coding agent
 
-Prefer not to write the recipe yourself? Paste this to a coding agent running inside a clone of this repo, filling in the blanks:
+Given to a coding agent running in a clone of this repository, the prompt below produces the script above for your dataset. Fill in the bracketed choices:
 
 ```text
 Read the "Tune your model on your data" section of this repo's README, and use
@@ -122,7 +116,23 @@ RS best config: C=10^0.34, gamma=10^-0.60  -> held-out test accuracy 0.9889
 
 ## Under the hood: GP regression and synthetic BO
 
-Before any real tuning, the building blocks are exercised on problems where the truth is known: GP regression on a toy function, then BO on synthetic objectives.
+The math stack, in the order each piece builds on the last:
+
+```mermaid
+flowchart LR
+    A[Gaussians] --> B[RBF kernel]
+    B --> C[GP prior]
+    C -->|condition on data| D[GP posterior]
+    D -->|LML + L-BFGS-B| E[fit hyperparameters]
+    E --> F[Expected Improvement]
+    F --> G[BO loop]
+    G --> H[SVM tuning]
+    H --> I[vs random search]
+```
+
+A joint Gaussian over function values, with covariance supplied by the RBF kernel, is the prior. Conditioning on observations gives the posterior mean and variance. Fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance; the BO loop repeatedly maximizes it, evaluates the objective there, and refits. The final experiment points that loop at a real hyperparameter search and compares it to random search.
+
+Before any real tuning, these building blocks are exercised on problems where the truth is known: GP regression on a toy function, then BO on synthetic objectives.
 
 ### GP regression
 
@@ -164,12 +174,11 @@ $ uv run pytest
 37 passed
 ```
 
-## How to run
+## Reproducing the results
+
+Every figure and number in this README comes from one of four scripts (setup is in [Quick start](#quick-start)):
 
 ```bash
-uv sync                                             # create the env from pyproject / uv.lock
-uv run pytest
-
 uv run python experiments/gp_demo.py                # GP figures + agreement prints (seconds)
 uv run python experiments/synthetic_optimization.py # 1D frames, Branin figures (~1–2 min)
 uv run python experiments/hyperparameter_tuning.py  # BO vs RS on digits (~15–35 min first run)
