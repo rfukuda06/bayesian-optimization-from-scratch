@@ -91,7 +91,7 @@ RS best config: C=10^0.34, gamma=10^-0.60  -> held-out test accuracy 0.9889
 
 ![Where BO samples](figures/hp_landscape.png)
 
-## Under the hood: GP regression and synthetic BO
+## GP regression and synthetic BO
 
 Before any real tuning, the building blocks are exercised on problems where the truth is known: GP regression on a toy function, then BO on synthetic objectives.
 
@@ -127,7 +127,7 @@ Delegated to the numerical libraries: dense linear algebra primitives (`scipy.li
 
 ## Correctness
 
-The benchmark above measures how well the assembled optimizer performs; this section verifies that the components underneath compute the correct quantities. Each piece implemented from scratch is checked against an independent reference, and the checks run as part of the test suite:
+Each piece implemented from scratch is checked against an independent reference, and the checks run as part of the test suite:
 
 - **GP agreement with scikit-learn:** at fixed hyperparameters, the posterior mean, posterior std, and log marginal likelihood match `GaussianProcessRegressor` to `atol 1e-6`. Measured agreement is around `1e-9`; the demo script prints the observed `max|Δmean|` and `max|Δstd|`.
 - **EI against Monte Carlo:** the closed-form EI is checked against the mean of `100,000` draws from `N(μ, σ²)` passed through `max(f - y_best - ξ, 0)`, agreeing to `rtol 2e-2`.
@@ -137,6 +137,12 @@ $ uv run pytest
 37 passed
 ```
 
+## Limitations
+
+- **`O(n³)` scaling.** The Cholesky factorization is cubic in the number of observations, which is sufficient for the tens-to-hundreds of points a BO run accumulates but rules out large-`n` regression without sparse or inducing-point approximations.
+- **Low-dimensional scope.** Everything here is exercised in 1–3 dimensions. EI over a box gets progressively harder to maximize as dimension grows, and this repo does not implement the trust-region or high-dimensional acquisition machinery that addresses it.
+- **Noisy-EI caveat.** EI uses the best *observed* `y` as its incumbent. Under observation noise the true incumbent is uncertain, and plain EI can be over-optimistic; a noise-aware acquisition (e.g. expected improvement over the posterior mean, or knowledge gradient) would be the principled fix.
+
 ## Quick start
 
 ```bash
@@ -144,9 +150,3 @@ uv sync
 uv run pytest                                      # the full test suite, seconds
 uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, seconds
 ```
-
-## Limitations
-
-- **`O(n³)` scaling.** The Cholesky factorization is cubic in the number of observations, which is sufficient for the tens-to-hundreds of points a BO run accumulates but rules out large-`n` regression without sparse or inducing-point approximations.
-- **Low-dimensional scope.** Everything here is exercised in 1–3 dimensions. EI over a box gets progressively harder to maximize as dimension grows, and this repo does not implement the trust-region or high-dimensional acquisition machinery that addresses it.
-- **Noisy-EI caveat.** EI uses the best *observed* `y` as its incumbent. Under observation noise the true incumbent is uncertain, and plain EI can be over-optimistic; a noise-aware acquisition (e.g. expected improvement over the posterior mean, or knowledge gradient) would be the principled fix.
