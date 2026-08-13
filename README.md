@@ -1,6 +1,6 @@
 # Gaussian Processes + Bayesian Optimization from scratch
 
-Gaussian process regression and Bayesian optimization implemented from the math up in NumPy and SciPy. The whole stack is exposed as one reusable call, `tune_model`, which tunes the hyperparameters of any scikit-learn estimator on any dataset you provide. Every piece is validated — the GP against scikit-learn's, the acquisition function against a Monte-Carlo estimate, the optimizer against random search ([Correctness](#correctness) and [the benchmark](#the-benchmark-bo-vs-random-search-on-digits) have the numbers). This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
+Gaussian process regression and Bayesian optimization implemented from the math up in NumPy and SciPy. The whole stack is exposed as one reusable call, `tune_model`, which tunes the hyperparameters of any scikit-learn estimator on any dataset you provide. Every piece is validated: the GP against scikit-learn's, the acquisition function against a Monte-Carlo estimate, the optimizer against random search ([Correctness](#correctness) and [the benchmark](#the-benchmark-bo-vs-random-search-on-digits) have the numbers). This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
 
 ## The pipeline
 
@@ -10,7 +10,7 @@ A joint Gaussian over function values, with covariance supplied by the RBF kerne
 
 ## Usage
 
-The optimizer is not tied to any dataset or model. You bring three things — your data as numeric arrays, a factory that builds your estimator, and bounds for the parameters you want tuned — and `tune_model` does the rest: a small adapter (`src/gpbo/model_selection.py`) turns fixed-fold cross-validation into a black-box objective, and the GP/Expected-Improvement loop spends 25 evaluations (by default) finding the best settings.
+The optimizer is not tied to any dataset or model. You bring three things: your data as numeric arrays, a factory that builds your estimator, and bounds for the parameters you want tuned. `tune_model` does the rest: a small adapter (`src/gpbo/model_selection.py`) turns fixed-fold cross-validation into a black-box objective, and the GP/Expected-Improvement loop spends 25 evaluations (by default) finding the best settings.
 
 ```python
 import pandas as pd
@@ -32,7 +32,7 @@ result = tune_model(X, y, model_factory=make_model,
                     param_space={"log10_C": (-4.0, 4.0)},   # ...and which knobs to search
                     cv=5, seed=0)
 
-result.best_params                       # {"log10_C": -0.35} — plug back into your factory
+result.best_params                       # {"log10_C": -0.35}; plug back into your factory
 result.best_cv_score                     # best mean CV accuracy found
 result.optimization_result.best_so_far   # convergence curve, if you want to plot it
 ```
@@ -44,7 +44,7 @@ You provide   numeric X, y · a model_factory(params) -> estimator ·
               param_space bounds · optionally cv, seed, scoring, n_init/n_iter
 You get back  TuningResult: .best_params, .best_cv_score,
               .optimization_result (all evaluations + best-so-far curve)
-Still yours   the final fit — model_factory(result.best_params).fit(X, y) —
+Still yours   the final fit (model_factory(result.best_params).fit(X, y)),
               plotting, and holding out a test set beforehand
 ```
 
@@ -52,7 +52,7 @@ The same data, choices, and seed reproduce an identical run; `print(result)` dis
 
 Scope and requirements:
 
-- Any scikit-learn estimator works (a `Pipeline` counts); the library does not select model types — comparing, say, an SVM against a random forest is two `tune_model` calls and two scores.
+- Any scikit-learn estimator works (a `Pipeline` counts); the library does not select model types: comparing, say, an SVM against a random forest is two `tune_model` calls and two scores.
 - Parameter transforms such as `C = 10**log10_C` belong inside the factory, which keeps the GP searching a well-scaled space.
 - `X, y` must already be numeric arrays; there is no CSV parsing, encoding, or missing-value handling.
 - Bounds are continuous float ranges; categorical or conditional hyperparameters are out of scope.
@@ -60,7 +60,7 @@ Scope and requirements:
 
 ### A worked example: breast cancer
 
-The recipe above is not hypothetical — `experiments/generic_tuning_demo.py` is exactly that code run end to end on scikit-learn's built-in `breast_cancer` dataset (569 tumor samples, 30 numeric features, malignant/benign label). To tune your own data, copy that file and swap the loading lines and the factory. It finishes in seconds: on the committed run (seed 0), tuning lifts a scaled logistic regression from the untuned `C = 1` baseline's `0.9789` mean 5-fold CV accuracy to `0.9824` at `C = 10^-0.35`:
+The recipe above is not hypothetical: `experiments/generic_tuning_demo.py` is exactly that code run end to end on scikit-learn's built-in `breast_cancer` dataset (569 tumor samples, 30 numeric features, malignant/benign label). To tune your own data, copy that file and swap the loading lines and the factory. It finishes in seconds: on the committed run (seed 0), tuning lifts a scaled logistic regression from the untuned `C = 1` baseline's `0.9789` mean 5-fold CV accuracy to `0.9824` at `C = 10^-0.35`:
 
 ![Reusable tuning demo](figures/generic_tuning_demo.png)
 
@@ -73,15 +73,15 @@ Read the "Tune your model on your data" section of this repo's README, and use
 experiments/generic_tuning_demo.py as the template.
 
 Write and run a script like that demo, but for my data: it lives at <PATH> and
-the target column is <NAME> — get it into the numeric X, y the library expects.
-Tune a <MODEL — or pick a sensible scikit-learn model for me>, searching
-<KNOBS AND RANGES — or pick 1–3 standard knobs, log-scaled where sensible>.
+the target column is <NAME>; get it into the numeric X, y the library expects.
+Tune a <MODEL, or pick a sensible scikit-learn model for me>, searching
+<KNOBS AND RANGES, or pick 1–3 standard knobs, log-scaled where sensible>.
 At the end, refit the best model on all my data so I can use it.
 ```
 
 ## The benchmark: BO vs random search on digits
 
-The demo above shows the interface; this experiment is the evidence that the optimizer underneath earns its keep. A single tuning run takes under a minute — this script runs **twenty** of them (10 seeds × {Bayesian optimization, random search} = 500 evaluations, all driven through `build_cv_objective`, the machinery layer underneath `tune_model`), which is why it takes ~15 minutes: the point is a fair, seed-averaged comparison with error bars, not one lucky run.
+The demo above shows the interface; this experiment is the evidence that the optimizer underneath earns its keep. A single tuning run takes under a minute; this script runs **twenty** of them (10 seeds × {Bayesian optimization, random search} = 500 evaluations, all driven through `build_cv_objective`, the machinery layer underneath `tune_model`), which is why it takes ~15 minutes: the point is a fair, seed-averaged comparison with error bars, not one lucky run.
 
 Tuning `SVC(C, γ)` on scikit-learn's digits dataset. Search space is `log₁₀C ∈ [-3, 3]`, `log₁₀γ ∈ [-5, 1]`; the objective is mean 5-fold stratified CV accuracy on an 80% pool. Each method gets 25 evaluations per seed, averaged over 10 seeds. A held-out 20% test set is touched exactly once per method at the end.
 
@@ -100,7 +100,7 @@ BO best config: C=10^0.38, gamma=10^-0.91  -> held-out test accuracy 0.9889
 RS best config: C=10^0.34, gamma=10^-0.60  -> held-out test accuracy 0.9889
 ```
 
-**Reading these honestly.** BO leads at 5 evaluations, random search is marginally ahead at 10 (`0.9872` vs `0.9867`), and BO is back in front by 25. The first 5 evaluations of *both* methods are random points — BO has not consulted its GP yet — so the 5-eval gap is partly seed luck, and the numbers stay within a fraction of a percent of each other throughout. This is the expected picture on an easy, well-bounded 2D landscape with a broad high-accuracy plateau: random search is genuinely competitive here, and both methods find configs that tie at `0.9889` on held-out test (Bergstra & Bengio, 2012, make exactly this point about random search on low-effective-dimension spaces). BO's advantage is sample efficiency early, and it grows on more expensive or more structured objectives where every evaluation is costly. Where BO concentrates its samples on the CV-accuracy landscape:
+**Reading these honestly.** BO leads at 5 evaluations, random search is marginally ahead at 10 (`0.9872` vs `0.9867`), and BO is back in front by 25. The first 5 evaluations of *both* methods are random points (BO has not consulted its GP yet), so the 5-eval gap is partly seed luck, and the numbers stay within a fraction of a percent of each other throughout. This is the expected picture on an easy, well-bounded 2D landscape with a broad high-accuracy plateau: random search is genuinely competitive here, and both methods find configs that tie at `0.9889` on held-out test (Bergstra & Bengio, 2012, make exactly this point about random search on low-effective-dimension spaces). BO's advantage is sample efficiency early, and it grows on more expensive or more structured objectives where every evaluation is costly. Where BO concentrates its samples on the CV-accuracy landscape:
 
 ![Where BO samples](figures/hp_landscape.png)
 
@@ -130,18 +130,18 @@ Sample placement over the Branin function (three global minima). The optimizer c
 
 ## What is implemented from scratch
 
-- **RBF kernel** — `k(x, x') = σ_f² exp(-‖x - x'‖² / 2ℓ²)`, with the squared-distance expansion done without an `(n, m, d)` intermediate (`src/gpbo/kernels.py`).
-- **GP posterior via Cholesky** — `α = K⁻¹y` through `cho_solve` (never an explicit inverse), predictive variance from triangular solves, jitter escalation for stability (`src/gpbo/gp.py`).
-- **Log marginal likelihood + multi-start fitting** — the LML in closed form using the Cholesky factor for `log|K|`, maximized over `(ℓ, σ_f², σ_n²)` in log space with multi-start L-BFGS-B; the current point is always kept as a candidate so the fit never worsens the starting LML (`src/gpbo/gp.py`).
-- **Expected Improvement** — the closed form `EI = I·Φ(z) + σ·φ(z)`, with the `σ→0` point-mass case handled explicitly (`src/gpbo/acquisition.py`).
-- **BO loop** — standardization of `y`, input scaling to `[0,1]^d`, warm-started hyperparameters across iterations, grid EI maximization in 1D and candidate + L-BFGS-B refinement in higher dimensions, plus a duplicate guard so the loop cannot stall re-evaluating a point (`src/gpbo/optimizer.py`).
+- **RBF kernel:** `k(x, x') = σ_f² exp(-‖x - x'‖² / 2ℓ²)`, with the squared-distance expansion done without an `(n, m, d)` intermediate (`src/gpbo/kernels.py`).
+- **GP posterior via Cholesky:** `α = K⁻¹y` through `cho_solve` (never an explicit inverse), predictive variance from triangular solves, jitter escalation for stability (`src/gpbo/gp.py`).
+- **Log marginal likelihood + multi-start fitting:** the LML in closed form using the Cholesky factor for `log|K|`, maximized over `(ℓ, σ_f², σ_n²)` in log space with multi-start L-BFGS-B; the current point is always kept as a candidate so the fit never worsens the starting LML (`src/gpbo/gp.py`).
+- **Expected Improvement:** the closed form `EI = I·Φ(z) + σ·φ(z)`, with the `σ→0` point-mass case handled explicitly (`src/gpbo/acquisition.py`).
+- **BO loop:** standardization of `y`, input scaling to `[0,1]^d`, warm-started hyperparameters across iterations, grid EI maximization in 1D and candidate + L-BFGS-B refinement in higher dimensions, plus a duplicate guard so the loop cannot stall re-evaluating a point (`src/gpbo/optimizer.py`).
 
 Delegated to the numerical libraries: dense linear algebra primitives (`scipy.linalg.cholesky`, `cho_solve`, `solve_triangular`), the L-BFGS-B optimizer (`scipy.optimize.minimize`), and the standard-normal `pdf`/`cdf` (`scipy.stats.norm`). The experiments use scikit-learn for the digits data and the SVM, and for the reference `GaussianProcessRegressor` in the agreement tests.
 
 ## Correctness
 
-- **GP agreement with scikit-learn** — at fixed hyperparameters, our posterior mean, posterior std, and log marginal likelihood match `GaussianProcessRegressor` to `atol 1e-6`. Measured agreement is around `1e-9`; the demo script prints the live `max|Δmean|` and `max|Δstd|`.
-- **EI against Monte Carlo** — the closed-form EI is checked against the mean of `100,000` draws from `N(μ, σ²)` passed through `max(f - y_best - ξ, 0)`, agreeing to `rtol 2e-2`.
+- **GP agreement with scikit-learn:** at fixed hyperparameters, our posterior mean, posterior std, and log marginal likelihood match `GaussianProcessRegressor` to `atol 1e-6`. Measured agreement is around `1e-9`; the demo script prints the live `max|Δmean|` and `max|Δstd|`.
+- **EI against Monte Carlo:** the closed-form EI is checked against the mean of `100,000` draws from `N(μ, σ²)` passed through `max(f - y_best - ξ, 0)`, agreeing to `rtol 2e-2`.
 
 ```
 $ uv run pytest
@@ -164,5 +164,5 @@ uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, sec
 
 ## References
 
-- Rasmussen & Williams, *Gaussian Processes for Machine Learning* (2006) — ch. 2 (regression, Cholesky prediction) and ch. 5 (model selection, marginal likelihood).
-- Bergstra & Bengio, *Random Search for Hyper-Parameter Optimization*, JMLR 13 (2012) — why random search is a strong baseline on spaces with low effective dimension.
+- Rasmussen & Williams, *Gaussian Processes for Machine Learning* (2006): ch. 2 (regression, Cholesky prediction) and ch. 5 (model selection, marginal likelihood).
+- Bergstra & Bengio, *Random Search for Hyper-Parameter Optimization*, JMLR 13 (2012): why random search is a strong baseline on spaces with low effective dimension.
