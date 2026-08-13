@@ -10,19 +10,25 @@ uv run pytest                                      # the full test suite, second
 uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, seconds
 ```
 
-## The user flow
+## The pipeline
 
-A tuning run has three parts:
+```mermaid
+flowchart LR
+    A[Gaussians] --> B[RBF kernel]
+    B --> C[GP prior]
+    C -->|condition on data| D[GP posterior]
+    D -->|LML + L-BFGS-B| E[fit hyperparameters]
+    E --> F[Expected Improvement]
+    F --> G[BO loop]
+    G --> H[SVM tuning]
+    H --> I[vs random search]
+```
 
-1. **You provide** your data as numeric arrays `X, y`, a factory function that builds your scikit-learn model from a dict of parameter values, and `(lo, hi)` bounds for each parameter to search — plus, optionally, the run's settings: `cv`, `seed`, `scoring`, and the evaluation budget.
-2. **The library runs** the whole optimization. It freezes the cross-validation folds once, making the objective deterministic, then spends 25 evaluations (by default) — 5 random, then 20 chosen by the Gaussian-process/Expected-Improvement loop — searching the bounds for the best-scoring parameters.
-3. **You get back** the same three things on every run: `best_params` (the winning values, ready to pass back to your factory), `best_cv_score`, and the full optimization history, including the convergence curve. The same data, choices, and seed reproduce an identical run, and `print(result)` displays exactly this contract along with the next step to take.
-
-Three steps remain the caller's after the run: training the final model — `model_factory(result.best_params).fit(X, y)` — plotting, and holding out a test set beforehand for an unbiased final measure.
+A joint Gaussian over function values, with covariance supplied by the RBF kernel, is the prior. Conditioning on observations gives the posterior mean and variance. Fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance; the BO loop repeatedly maximizes it, evaluates the objective there, and refits. The final experiment points that loop at a real hyperparameter search and compares it to random search.
 
 ## Usage
 
-The optimizer is not tied to any dataset or model. `tune_model` implements the flow above: a small adapter (`src/gpbo/model_selection.py`) turns fixed-fold cross-validation into a black-box objective for the GP/Expected-Improvement loop.
+The optimizer is not tied to any dataset or model. You bring three things — your data as numeric arrays, a factory that builds your estimator, and bounds for the parameters you want tuned — and `tune_model` does the rest: a small adapter (`src/gpbo/model_selection.py`) turns fixed-fold cross-validation into a black-box objective, and the GP/Expected-Improvement loop spends 25 evaluations (by default) finding the best settings.
 
 ```python
 import pandas as pd
@@ -59,6 +65,8 @@ You get back  TuningResult: .best_params, .best_cv_score,
 Still yours   the final fit — model_factory(result.best_params).fit(X, y) —
               plotting, and holding out a test set beforehand
 ```
+
+The same data, choices, and seed reproduce an identical run; `print(result)` displays this contract.
 
 Scope and requirements:
 
@@ -116,23 +124,7 @@ RS best config: C=10^0.34, gamma=10^-0.60  -> held-out test accuracy 0.9889
 
 ## Under the hood: GP regression and synthetic BO
 
-The math stack, in the order each piece builds on the last:
-
-```mermaid
-flowchart LR
-    A[Gaussians] --> B[RBF kernel]
-    B --> C[GP prior]
-    C -->|condition on data| D[GP posterior]
-    D -->|LML + L-BFGS-B| E[fit hyperparameters]
-    E --> F[Expected Improvement]
-    F --> G[BO loop]
-    G --> H[SVM tuning]
-    H --> I[vs random search]
-```
-
-A joint Gaussian over function values, with covariance supplied by the RBF kernel, is the prior. Conditioning on observations gives the posterior mean and variance. Fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance; the BO loop repeatedly maximizes it, evaluates the objective there, and refits. The final experiment points that loop at a real hyperparameter search and compares it to random search.
-
-Before any real tuning, these building blocks are exercised on problems where the truth is known: GP regression on a toy function, then BO on synthetic objectives.
+Before any real tuning, the building blocks are exercised on problems where the truth is known: GP regression on a toy function, then BO on synthetic objectives.
 
 ### GP regression
 
