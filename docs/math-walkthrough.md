@@ -26,10 +26,10 @@ $\Sigma \in \mathbb{R}^{n \times n}$:
 
 $$
 p(\mathbf{x}) = (2\pi)^{-n/2} \lvert\Sigma\rvert^{-1/2}
-\exp\!\left(-\tfrac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top \Sigma^{-1} (\mathbf{x}-\boldsymbol{\mu})\right).
+\exp\left(-\tfrac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top \Sigma^{-1} (\mathbf{x}-\boldsymbol{\mu})\right).
 $$
 
-The entry $\Sigma_{ij} = \operatorname{Cov}(x_i, x_j)$ is the whole story: it says how
+The entry $\Sigma_{ij} = \mathrm{Cov}(x_i, x_j)$ is the whole story: it says how
 much learning the value of $x_i$ should move your belief about $x_j$. Diagonal
 entries are marginal variances; off-diagonal entries encode coupling. A Gaussian
 with a rich covariance matrix is not $n$ separate beliefs — it is one joint belief
@@ -41,7 +41,7 @@ finite set of inputs $x_1, \dots, x_n$, the vector $(f(x_1), \dots, f(x_n))$ is 
 Gaussian with
 
 $$
-\mathbb{E}[f(x_i)] = m(x_i), \qquad \operatorname{Cov}(f(x_i), f(x_j)) = k(x_i, x_j).
+\mathbb{E}[f(x_i)] = m(x_i), \qquad \mathrm{Cov}(f(x_i), f(x_j)) = k(x_i, x_j).
 $$
 
 In this library $m \equiv 0$ (see §6 for why that is honest after standardization).
@@ -65,14 +65,14 @@ $$
 kernel:
 
 $$
-k(x, x') = \sigma_f^2 \exp\!\left(-\frac{\lVert x - x' \rVert^2}{2\ell^2}\right).
+k(x, x') = \sigma_f^2 \exp\left(-\frac{\lVert x - x' \rVert^2}{2\ell^2}\right).
 $$
 
 *Length scale $\ell$ controls wiggliness.* The correlation between two function
 values at distance $r = \lVert x - x' \rVert$ is
 
 $$
-\operatorname{corr}\big(f(x), f(x')\big) = \frac{k(x,x')}{\sigma_f^2} = e^{-r^2/2\ell^2},
+\mathrm{corr}\big(f(x), f(x')\big) = \frac{k(x,x')}{\sigma_f^2} = e^{-r^2/2\ell^2},
 $$
 
 which is $\approx 0.61$ at $r = \ell$, $\approx 0.14$ at $r = 2\ell$, and $\approx 0.01$
@@ -86,7 +86,7 @@ covariance (the derivative of a Gaussian process is again Gaussian, with covaria
 obtained by differentiating $k$ once in each argument):
 
 $$
-\operatorname{Cov}\big(f'(x), f'(x')\big)
+\mathrm{Cov}\big(f'(x), f'(x')\big)
 = \frac{\partial^2}{\partial x\, \partial x'} k(x - x')
 = -k''(\tau).
 $$
@@ -97,7 +97,7 @@ $k''(\tau) = \sigma_f^2 \left(\frac{\tau^2}{\ell^4} - \frac{1}{\ell^2}\right) e^
 Evaluating at $\tau = 0$:
 
 $$
-\operatorname{Var}\big(f'(x)\big) = -k''(0) = \frac{\sigma_f^2}{\ell^2}.
+\mathrm{Var}\big(f'(x)\big) = -k''(0) = \frac{\sigma_f^2}{\ell^2}.
 $$
 
 The typical slope of a sample path is $\sigma_f / \ell$: halve the length scale and
@@ -124,14 +124,14 @@ produce tiny negative squared distances); `_as_2d` coerces 1D inputs to $(n, 1)$
 $\varepsilon \sim \mathcal{N}(0, \sigma_n^2 I)$ independent of $f$. Stack the noisy
 training targets $y$ and the latent test values $f_\ast$. Both are linear in jointly
 Gaussian quantities ($f$ at various inputs, plus independent Gaussian noise), so they
-are jointly Gaussian. The blocks: $\operatorname{Cov}(y, y) = K + \sigma_n^2 I$ (noise
+are jointly Gaussian. The blocks: $\mathrm{Cov}(y, y) = K + \sigma_n^2 I$ (noise
 adds only on the diagonal, and only to observed values), and
-$\operatorname{Cov}(y, f_\ast) = \operatorname{Cov}(f + \varepsilon, f_\ast) = K_\ast$
+$\mathrm{Cov}(y, f_\ast) = \mathrm{Cov}(f + \varepsilon, f_\ast) = K_\ast$
 because the noise is independent of everything. Hence
 
 $$
 \begin{bmatrix} y \\ f_\ast \end{bmatrix}
-\sim \mathcal{N}\!\left(0,\;
+\sim \mathcal{N}\left(0,\;
 \begin{bmatrix} K + \sigma_n^2 I & K_\ast \\ K_\ast^\top & K_{\ast\ast} \end{bmatrix}
 \right).
 $$
@@ -140,7 +140,7 @@ $$
 
 $$
 \begin{bmatrix} a \\ b \end{bmatrix}
-\sim \mathcal{N}\!\left(
+\sim \mathcal{N}\left(
 \begin{bmatrix} \mu_a \\ \mu_b \end{bmatrix},
 \begin{bmatrix} A & C \\ C^\top & B \end{bmatrix}
 \right),
@@ -149,7 +149,7 @@ $$
 the conditional is
 
 $$
-b \mid a \;\sim\; \mathcal{N}\!\big(\mu_b + C^\top A^{-1}(a - \mu_a),\;\; B - C^\top A^{-1} C\big).
+b \mid a \;\sim\; \mathcal{N}\big(\mu_b + C^\top A^{-1}(a - \mu_a),\;\; B - C^\top A^{-1} C\big).
 $$
 
 *Why this is true* (worked, no completing-the-square slog). Define the residual
@@ -157,7 +157,7 @@ $w = b - C^\top A^{-1} a$, i.e. what is left of $b$ after subtracting its best l
 predictor from $a$. Check its cross-covariance with $a$:
 
 $$
-\operatorname{Cov}(w, a) = \operatorname{Cov}(b, a) - C^\top A^{-1} \operatorname{Cov}(a, a)
+\mathrm{Cov}(w, a) = \mathrm{Cov}(b, a) - C^\top A^{-1} \mathrm{Cov}(a, a)
 = C^\top - C^\top A^{-1} A = 0.
 $$
 
@@ -167,15 +167,15 @@ independence. So conditioning on $a$ does not change the distribution of $w$ at 
 $\mathbb{E}[w] = \mu_b - C^\top A^{-1} \mu_a$, and with $M = C^\top A^{-1}$,
 
 $$
-\operatorname{Cov}(w)
-= B - \operatorname{Cov}(b,a) M^\top - M \operatorname{Cov}(a,b) + M A M^\top
+\mathrm{Cov}(w)
+= B - \mathrm{Cov}(b,a) M^\top - M \mathrm{Cov}(a,b) + M A M^\top
 = B - 2\,C^\top A^{-1} C + C^\top A^{-1} C
 = B - C^\top A^{-1} C.
 $$
 
 Now write $b = w + M a$. Given $a$, the term $Ma$ is a known constant, so $b \mid a$
 is $w$ shifted by $Ma$ — Gaussian with mean $\mu_b + M(a - \mu_a)$ and covariance
-$\operatorname{Cov}(w)$. That is the identity.
+$\mathrm{Cov}(w)$. That is the identity.
 
 **Apply it.** Set $a = y$, $b = f_\ast$, $\mu_a = \mu_b = 0$, $A = K + \sigma_n^2 I$,
 $B = K_{\ast\ast}$, $C = K_\ast$:
@@ -294,7 +294,7 @@ $$
 
 i.e. exactly the same GP with noise variance $\sigma_n^2 + \delta$. Jitter means
 "pretend the observations are a hair noisier than claimed." The code tries an
-escalating ladder $\delta \in \{10^{-10}, 10^{-9}, \dots, 10^{-6}\}$, warns on each
+escalating ladder $\delta \in \lbrace 10^{-10}, 10^{-9}, \dots, 10^{-6} \rbrace$, warns on each
 escalation, and raises only if $10^{-6}$ still fails — so the perturbation stays
 minimal in the common case.
 
@@ -306,7 +306,7 @@ $\delta$ is tiny compared to the *smallest* eigenvalue. On the 12-point $[0,10]$
 
 - At $\ell = 1.5$: $\lambda_{\min}(K) \approx 2 \times 10^{-9}$. The near-noiseless
   interpolation setting uses $\sigma_n^2 = 10^{-10}$, and the jitter floor adds
-  another $10^{-10}$ — a total diagonal shift of $\approx 10\%$ of $\lambda_{\min}$.
+  another $10^{-10}$ — a total diagonal shift of about 10% of $\lambda_{\min}$.
   That visibly perturbs interpolation: the posterior mean misses the training targets
   by $\sim 10^{-3}$, purely for numerical (not correctness) reasons.
 - At $\ell = 1.0$: $\lambda_{\min}(K) \approx 10^{-6}$, so the same
@@ -324,7 +324,7 @@ being harmless.
 **→ Code:** `src/gpbo/gp.py`, `GaussianProcess._update_factorization` — builds
 $K_y$, runs the jitter ladder to get $L$, and caches $\alpha$ via `cho_solve`;
 `predict` reuses $L$ through `solve_triangular`, and `log_marginal_likelihood` reads
-$\log\lvert K_y \rvert$ off $\operatorname{diag}(L)$.
+$\log\lvert K_y \rvert$ off $\mathrm{diag}(L)$.
 
 ---
 
@@ -376,7 +376,7 @@ regularizer. Watch both failure modes on the length scale:
   $\log\lvert K_y \rvert$ at that signal level. Smooth data explained as white noise
   = low density.
 - **$\ell$ too large.** $K$ tends toward the rank-one matrix $\sigma_f^2 \mathbf{1}\mathbf{1}^\top$:
-  spectrum $\approx \{n\sigma_f^2 + \sigma_n^2, \sigma_n^2, \dots, \sigma_n^2\}$. The
+  spectrum $\approx \lbrace n\sigma_f^2 + \sigma_n^2, \sigma_n^2, \dots, \sigma_n^2 \rbrace$. The
   determinant collapses (great penalty term!), but everything in $y$ orthogonal to the
   constant vector — all the actual shape — must be explained through eigenvalues
   $\approx \sigma_n^2$, so the fit term costs
@@ -389,20 +389,20 @@ regularizer. Watch both failure modes on the length scale:
 
 **The analytic gradient (noted, not implemented).** With
 $\alpha = K_y^{-1} y$, two matrix-calculus identities —
-$\partial \log\lvert K_y \rvert = \operatorname{tr}(K_y^{-1}\, \partial K_y)$ and
+$\partial \log\lvert K_y \rvert = \mathrm{tr}(K_y^{-1}\, \partial K_y)$ and
 $\partial K_y^{-1} = -K_y^{-1} (\partial K_y) K_y^{-1}$ — give
 
 $$
 \frac{\partial}{\partial \theta_j}\left(-\tfrac12 y^\top K_y^{-1} y\right)
 = \tfrac12\, \alpha^\top \frac{\partial K_y}{\partial \theta_j} \alpha
-= \tfrac12 \operatorname{tr}\!\left(\alpha \alpha^\top \frac{\partial K_y}{\partial \theta_j}\right),
+= \tfrac12 \mathrm{tr}\left(\alpha \alpha^\top \frac{\partial K_y}{\partial \theta_j}\right),
 $$
 
 and combining with the determinant term:
 
 $$
 \frac{\partial \log p(y \mid X, \theta)}{\partial \theta_j}
-= \tfrac12 \operatorname{tr}\!\left( \left(\alpha\alpha^\top - K_y^{-1}\right) \frac{\partial K_y}{\partial \theta_j} \right).
+= \tfrac12 \mathrm{tr}\left( \left(\alpha\alpha^\top - K_y^{-1}\right) \frac{\partial K_y}{\partial \theta_j} \right).
 $$
 
 This library optimizes the LML with finite-difference gradients inside L-BFGS-B
