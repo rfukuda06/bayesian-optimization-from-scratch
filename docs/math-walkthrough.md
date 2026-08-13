@@ -58,7 +58,7 @@ inner product of feature maps, $k(x, x') = \langle \varphi(x), \varphi(x') \rang
 (for RBF the feature space is infinite-dimensional), so for any $v \in \mathbb{R}^n$:
 
 $$
-v^\top K v = \Big\lVert \textstyle\sum_i v_i\, \varphi(x_i) \Big\rVert^2 \ge 0.
+v^\top K v = \Big\lVert \textstyle\sum_i v_i\  \varphi(x_i) \Big\rVert^2 \ge 0.
 $$
 
 **The RBF kernel and its two knobs.** This repo uses the squared-exponential (RBF)
@@ -87,7 +87,7 @@ obtained by differentiating $k$ once in each argument):
 
 $$
 \mathrm{Cov}\big(f'(x), f'(x')\big)
-= \frac{\partial^2}{\partial x\, \partial x'} k(x - x')
+= \frac{\partial^2}{\partial x\  \partial x'} k(x - x')
 = -k''(\tau).
 $$
 
@@ -112,7 +112,7 @@ pure vertical-stretch knob, orthogonal to the shape knob $\ell$.
 
 **→ Code:** `src/gpbo/kernels.py`, `RBFKernel.__call__` — builds the Gram matrix for
 any two point sets using the expansion
-$\lVert a - b \rVert^2 = \lVert a \rVert^2 + \lVert b \rVert^2 - 2\, a \cdot b$
+$\lVert a - b \rVert^2 = \lVert a \rVert^2 + \lVert b \rVert^2 - 2\  a \cdot b$
 (clipped at zero because floating-point cancellation can make near-identical points
 produce tiny negative squared distances); `_as_2d` coerces 1D inputs to $(n, 1)$.
 
@@ -130,26 +130,26 @@ $\mathrm{Cov}(y, f_\ast) = \mathrm{Cov}(f + \varepsilon, f_\ast) = K_\ast$
 because the noise is independent of everything. Hence
 
 $$
-\begin{bmatrix} y \\ f_\ast \end{bmatrix}
-\sim \mathcal{N}\left(0,\;
-\begin{bmatrix} K + \sigma_n^2 I & K_\ast \\ K_\ast^\top & K_{\ast\ast} \end{bmatrix}
+\begin{bmatrix} y \cr f_\ast \end{bmatrix}
+\sim \mathcal{N}\left(0,\ 
+\begin{bmatrix} K + \sigma_n^2 I & K_\ast \cr K_\ast^\top & K_{\ast\ast} \end{bmatrix}
 \right).
 $$
 
 **The conditioning identity.** For jointly Gaussian vectors
 
 $$
-\begin{bmatrix} a \\ b \end{bmatrix}
+\begin{bmatrix} a \cr b \end{bmatrix}
 \sim \mathcal{N}\left(
-\begin{bmatrix} \mu_a \\ \mu_b \end{bmatrix},
-\begin{bmatrix} A & C \\ C^\top & B \end{bmatrix}
+\begin{bmatrix} \mu_a \cr \mu_b \end{bmatrix},
+\begin{bmatrix} A & C \cr C^\top & B \end{bmatrix}
 \right),
 $$
 
 the conditional is
 
 $$
-b \mid a \;\sim\; \mathcal{N}\big(\mu_b + C^\top A^{-1}(a - \mu_a),\;\; B - C^\top A^{-1} C\big).
+b \mid a \ \sim\  \mathcal{N}\big(\mu_b + C^\top A^{-1}(a - \mu_a),\ \  B - C^\top A^{-1} C\big).
 $$
 
 *Why this is true* (worked, no completing-the-square slog). Define the residual
@@ -169,7 +169,7 @@ $\mathbb{E}[w] = \mu_b - C^\top A^{-1} \mu_a$, and with $M = C^\top A^{-1}$,
 $$
 \mathrm{Cov}(w)
 = B - \mathrm{Cov}(b,a) M^\top - M \mathrm{Cov}(a,b) + M A M^\top
-= B - 2\,C^\top A^{-1} C + C^\top A^{-1} C
+= B - 2\ C^\top A^{-1} C + C^\top A^{-1} C
 = B - C^\top A^{-1} C.
 $$
 
@@ -181,11 +181,11 @@ $\mathrm{Cov}(w)$. That is the identity.
 $B = K_{\ast\ast}$, $C = K_\ast$:
 
 $$
-\boxed{\;
+\boxed{\ 
 \mu_\ast = K_\ast^\top (K + \sigma_n^2 I)^{-1} y,
 \qquad
 \Sigma_\ast = K_{\ast\ast} - K_\ast^\top (K + \sigma_n^2 I)^{-1} K_\ast.
-\;}
+\ }
 $$
 
 Dimensions check out: $K_\ast^\top$ is $m \times n$, the inverse is $n \times n$, $y$ is
@@ -195,7 +195,7 @@ $n$, so $\mu_\ast \in \mathbb{R}^m$; $\Sigma_\ast$ is $m \times m$.
 
 - *The mean is a weighted sum of kernel bumps.* Define
   $\alpha = (K + \sigma_n^2 I)^{-1} y \in \mathbb{R}^n$ once; then for any test point,
-  $\mu_\ast(x_\ast) = \sum_{i=1}^n \alpha_i\, k(x_i, x_\ast)$. The posterior mean is a
+  $\mu_\ast(x_\ast) = \sum_{i=1}^n \alpha_i\  k(x_i, x_\ast)$. The posterior mean is a
   linear combination of one kernel function centered at each training point — data
   points near $x_\ast$ dominate, and points beyond a few length scales contribute
   nothing. Far from all data, $K_\ast \to 0$, so the mean reverts to the prior mean 0
@@ -241,7 +241,7 @@ factors:
 $$
 \alpha = K_y^{-1} y = L^{-\top} L^{-1} y
 \quad\text{via}\quad
-L u = y \;\text{(forward substitution)},\;\; L^\top \alpha = u \;\text{(back substitution)},
+L u = y \ \text{(forward substitution)},\ \  L^\top \alpha = u \ \text{(back substitution)},
 $$
 
 each an $O(n^2)$ triangular solve. For the predictive variance, let
@@ -261,7 +261,7 @@ product.
 **Conditioning: why the explicit inverse is worse.** With unit roundoff
 $\varepsilon \approx 10^{-16}$ and condition number $\kappa = \kappa(K_y)$, solving
 through a backward-stable factorization gives a relative error on the order of
-$\kappa\, \varepsilon$. Forming $K_y^{-1}$ explicitly and then multiplying costs
+$\kappa\  \varepsilon$. Forming $K_y^{-1}$ explicitly and then multiplying costs
 roughly $3\times$ the flops, loses backward stability, and its worst-case error bound
 scales like $\kappa^2 \varepsilon$ — inversion effectively squares the condition
 number's bite. RBF Gram matrices are routinely terribly conditioned: in this repo's
@@ -336,7 +336,7 @@ Marginalizing out $f$ requires no integral gymnastics: a sum of independent Gaus
 vectors is Gaussian, with means and covariances adding, so
 
 $$
-y \mid X, \theta \;\sim\; \mathcal{N}(0,\; K_y), \qquad K_y = K + \sigma_n^2 I.
+y \mid X, \theta \ \sim\  \mathcal{N}(0,\  K_y), \qquad K_y = K + \sigma_n^2 I.
 $$
 
 This is the "marginal" likelihood because the latent function has been integrated out
@@ -346,9 +346,9 @@ Taking the log of the multivariate Gaussian density:
 
 $$
 \log p(y \mid X, \theta)
-= \underbrace{-\tfrac{1}{2}\, y^\top K_y^{-1} y}_{\text{data fit}}
-\;\underbrace{-\;\tfrac{1}{2} \log \lvert K_y \rvert}_{\text{complexity penalty}}
-\;\underbrace{-\;\tfrac{n}{2} \log 2\pi}_{\text{constant}}.
+= \underbrace{-\tfrac{1}{2}\  y^\top K_y^{-1} y}_{\text{data fit}}
+\ \underbrace{-\ \tfrac{1}{2} \log \lvert K_y \rvert}_{\text{complexity penalty}}
+\ \underbrace{-\ \tfrac{n}{2} \log 2\pi}_{\text{constant}}.
 $$
 
 - **Data fit** is the (negative half) Mahalanobis norm of $y$ under the model — the
@@ -389,12 +389,12 @@ regularizer. Watch both failure modes on the length scale:
 
 **The analytic gradient (noted, not implemented).** With
 $\alpha = K_y^{-1} y$, two matrix-calculus identities —
-$\partial \log\lvert K_y \rvert = \mathrm{tr}(K_y^{-1}\, \partial K_y)$ and
+$\partial \log\lvert K_y \rvert = \mathrm{tr}(K_y^{-1}\  \partial K_y)$ and
 $\partial K_y^{-1} = -K_y^{-1} (\partial K_y) K_y^{-1}$ — give
 
 $$
 \frac{\partial}{\partial \theta_j}\left(-\tfrac12 y^\top K_y^{-1} y\right)
-= \tfrac12\, \alpha^\top \frac{\partial K_y}{\partial \theta_j} \alpha
+= \tfrac12\  \alpha^\top \frac{\partial K_y}{\partial \theta_j} \alpha
 = \tfrac12 \mathrm{tr}\left(\alpha \alpha^\top \frac{\partial K_y}{\partial \theta_j}\right),
 $$
 
@@ -434,7 +434,7 @@ posterior for the objective is $f \sim \mathcal{N}(\mu, \sigma^2)$. Define the
 improvement over the incumbent, demanding a margin $\xi \ge 0$:
 
 $$
-\mathrm{EI}(x) = \mathbb{E}\big[\max(f - y_{\text{best}} - \xi,\; 0)\big].
+\mathrm{EI}(x) = \mathbb{E}\big[\max(f - y_{\text{best}} - \xi,\  0)\big].
 $$
 
 The $\max(\cdot, 0)$ is what makes this interesting: outcomes below the bar cost
@@ -453,27 +453,27 @@ $\epsilon > -I/\sigma = -z$, so
 
 $$
 \mathrm{EI}
-= \int_{-z}^{\infty} (I + \sigma \epsilon)\, \phi(\epsilon)\, d\epsilon
-= I \int_{-z}^{\infty} \phi(\epsilon)\, d\epsilon
-\;+\; \sigma \int_{-z}^{\infty} \epsilon\, \phi(\epsilon)\, d\epsilon.
+= \int_{-z}^{\infty} (I + \sigma \epsilon)\  \phi(\epsilon)\  d\epsilon
+= I \int_{-z}^{\infty} \phi(\epsilon)\  d\epsilon
+\ +\  \sigma \int_{-z}^{\infty} \epsilon\  \phi(\epsilon)\  d\epsilon.
 $$
 
 First integral: $\int_{-z}^{\infty} \phi = 1 - \Phi(-z) = \Phi(z)$ by symmetry.
-Second integral: since $\phi'(\epsilon) = -\epsilon\, \phi(\epsilon)$, the integrand
-is an exact derivative, $\int_{-z}^{\infty} \epsilon\, \phi(\epsilon)\, d\epsilon
+Second integral: since $\phi'(\epsilon) = -\epsilon\  \phi(\epsilon)$, the integrand
+is an exact derivative, $\int_{-z}^{\infty} \epsilon\  \phi(\epsilon)\  d\epsilon
 = \big[-\phi(\epsilon)\big]_{-z}^{\infty} = \phi(-z) = \phi(z)$. Therefore
 
 $$
-\boxed{\;\mathrm{EI}(x) = I\, \Phi(z) + \sigma\, \phi(z), \qquad
-I = \mu - y_{\text{best}} - \xi,\quad z = I/\sigma. \;}
+\boxed{\ \mathrm{EI}(x) = I\  \Phi(z) + \sigma\  \phi(z), \qquad
+I = \mu - y_{\text{best}} - \xi,\quad z = I/\sigma. \ }
 $$
 
 **Reading the two terms.**
 
-- $I\, \Phi(z)$ is **exploitation**: the mean's headroom over the bar, weighted by the
+- $I\  \Phi(z)$ is **exploitation**: the mean's headroom over the bar, weighted by the
   probability $\Phi(z)$ that the point actually clears it. It dominates where the
   model already predicts something good.
-- $\sigma\, \phi(z)$ is **exploration**: a reward purely for uncertainty. Even where
+- $\sigma\  \phi(z)$ is **exploration**: a reward purely for uncertainty. Even where
   $I < 0$ (mean below the incumbent), a large $\sigma$ keeps EI positive because the
   upper tail might reach past $y_{\text{best}}$. Whenever $\sigma > 0$, EI $> 0$.
 - The split is exact, not a metaphor: differentiating the closed form gives
@@ -493,7 +493,7 @@ $z \to -\infty$ and both terms vanish (the Gaussian tail decays faster than
 $1/\sigma$ grows). If $I = 0$: $\mathrm{EI} = \sigma\phi(0) \to 0$. So
 
 $$
-\lim_{\sigma \to 0} \mathrm{EI} = \max(\mu - y_{\text{best}} - \xi,\; 0):
+\lim_{\sigma \to 0} \mathrm{EI} = \max(\mu - y_{\text{best}} - \xi,\  0):
 $$
 
 a point mass either beats the incumbent or it does not — no uncertainty, no
@@ -523,7 +523,7 @@ noise-robust variants exist — e.g. replacing $y_{\text{best}}$ with the best
 (knowledge gradient) — and are out of scope for this library.
 
 **→ Code:** `src/gpbo/acquisition.py`, `expected_improvement` — vectorized evaluation
-of $I\,\Phi(z) + \sigma\,\phi(z)$ with the $\sigma \le 10^{-12} \Rightarrow \mathrm{EI} = 0$
+of $I\ \Phi(z) + \sigma\ \phi(z)$ with the $\sigma \le 10^{-12} \Rightarrow \mathrm{EI} = 0$
 convention and the final nonnegativity clip.
 
 ---
