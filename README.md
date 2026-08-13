@@ -1,6 +1,6 @@
 # Gaussian Processes + Bayesian Optimization from scratch
 
-Gaussian process regression and Bayesian optimization implemented from the math up in NumPy and SciPy. The whole stack is exposed as one reusable call, `tune_model`, which tunes the hyperparameters of any scikit-learn estimator on any dataset you provide. Every piece is validated: the GP against scikit-learn's, the acquisition function against a Monte-Carlo estimate, the optimizer against random search ([Correctness](#correctness) and [the benchmark](#the-benchmark-bo-vs-random-search-on-digits) have the numbers). This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
+This is a Gaussian process regression and Bayesian optimization implemented in NumPy and SciPy. The project is exposed as one reusable call, `tune_model`, which tunes the hyperparameters of any scikit-learn estimator on any dataset provided. Every piece is validated: the GP against scikit-learn's, the acquisition function against a Monte-Carlo estimate, the optimizer against random search ([Correctness](#correctness) and [the benchmark](#the-benchmark-bo-vs-random-search-on-digits) have the numbers). This is a learning project: the code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
 
 ## The pipeline
 
@@ -10,7 +10,7 @@ The prior is a joint Gaussian over function values, with covariance supplied by 
 
 ## Usage
 
-The optimizer is not tied to any dataset or model. `tune_model` takes three inputs: the data as numeric arrays, a factory that builds the estimator, and bounds for the parameters to tune. A small adapter (`src/gpbo/model_selection.py`) turns fixed-fold cross-validation into a black-box objective, and the GP/Expected-Improvement loop spends 25 evaluations (by default) finding the best parameters.
+`tune_model` takes three inputs: the data as numeric arrays, a factory that builds the estimator, and bounds for the parameters to tune. A small adapter (`src/gpbo/model_selection.py`) turns fixed-fold cross-validation into a black-box objective, and the GP/Expected-Improvement loop spends 25 evaluations (by default) finding the best parameters.
 
 ```python
 import pandas as pd
@@ -37,7 +37,7 @@ result.best_cv_score                     # best mean CV accuracy found
 result.optimization_result.best_so_far   # best-so-far curve, for plotting
 ```
 
-Adapting the snippet to another dataset means changing the three numbered parts: (1) the loading lines, which must produce numeric `X, y` arrays; (2) the factory, which can build any scikit-learn estimator from `params`; and (3) `param_space`, the bounds searched for each parameter. The remaining lines stay the same.
+Adapting the snippet to another dataset means changing the three numbered parts: (1) the loading lines, which must produce numeric `X, y` arrays; (2) the factory, which can build any scikit-learn estimator from `params`; and (3) `param_space`, the bounds searched for each parameter. The other lines stay the same.
 
 Interface summary:
 
@@ -70,7 +70,7 @@ Scope and requirements:
 
 The demo above shows the interface; this experiment evaluates the optimizer itself. A single tuning run takes under a minute; this script runs twenty of them (10 seeds × {Bayesian optimization, random search} = 500 evaluations, all driven through `build_cv_objective`, the layer underneath `tune_model`), which is why it takes ~15 minutes: the result is a seed-averaged comparison with error bars rather than a single run.
 
-Tuning `SVC(C, γ)` on scikit-learn's digits dataset. Search space is `log₁₀C ∈ [-3, 3]`, `log₁₀γ ∈ [-5, 1]`; the objective is mean 5-fold stratified CV accuracy on an 80% pool. Each method gets 25 evaluations per seed, averaged over 10 seeds. A held-out 20% test set is touched exactly once per method at the end.
+Tuning `SVC(C, γ)` on scikit-learn's digits dataset. Search space is `log₁₀C ∈ [-3, 3]`, `log₁₀γ ∈ [-5, 1]`; the objective is mean 5-fold stratified CV accuracy on an 80% pool. Each method gets 25 evaluations per seed, averaged over 10 seeds. A held-out 20% test set is touched once per method at the end.
 
 ![BO vs random search](figures/hp_comparison.png)
 
@@ -87,7 +87,7 @@ BO best config: C=10^0.38, gamma=10^-0.91  -> held-out test accuracy 0.9889
 RS best config: C=10^0.34, gamma=10^-0.60  -> held-out test accuracy 0.9889
 ```
 
-**Interpretation.** BO leads at 5 evaluations, random search is marginally ahead at 10 (`0.9872` vs `0.9867`), and BO is ahead again at 25. The first 5 evaluations of both methods are random points (BO has not yet used its GP), so the 5-eval gap is partly seed variance, and the numbers stay within a fraction of a percent of each other throughout. This is the expected behavior on an easy, well-bounded 2D landscape with a broad high-accuracy plateau: random search is competitive here, and both methods find configs that tie at `0.9889` on held-out test (Bergstra & Bengio, 2012, make this point about random search on low-effective-dimension spaces). BO's advantage is sample efficiency early, and it grows on more expensive or more structured objectives where every evaluation is costly. Where BO concentrates its samples on the CV-accuracy landscape:
+**Interpretation.** BO leads at 5 evaluations, random search is marginally ahead at 10 (`0.9872` vs `0.9867`), and BO is ahead again at 25. The first 5 evaluations of both methods are random points (BO has not yet used its GP), so the 5-eval gap is partly seed variance, and the numbers stay within a fraction of a percent of each other throughout. This is the expected behavior on an easy, well-bounded 2D landscape with a broad high-accuracy plateau: random search is competitive here, and both methods find configs that tie at `0.9889` on held-out test. BO's advantage is sample efficiency early, and it grows on more expensive or more structured objectives where every evaluation is costly. Where BO concentrates its samples on the CV-accuracy landscape:
 
 ![Where BO samples](figures/hp_landscape.png)
 
@@ -148,8 +148,3 @@ uv run python experiments/generic_tuning_demo.py   # end-to-end tuning demo, sec
 - **`O(n³)` scaling.** The Cholesky factorization is cubic in the number of observations, which is sufficient for the tens-to-hundreds of points a BO run accumulates but rules out large-`n` regression without sparse or inducing-point approximations.
 - **Low-dimensional scope.** Everything here is exercised in 1–3 dimensions. EI over a box gets progressively harder to maximize as dimension grows, and this repo does not implement the trust-region or high-dimensional acquisition machinery that addresses it.
 - **Noisy-EI caveat.** EI uses the best *observed* `y` as its incumbent. Under observation noise the true incumbent is uncertain, and plain EI can be over-optimistic; a noise-aware acquisition (e.g. expected improvement over the posterior mean, or knowledge gradient) would be the principled fix.
-
-## References
-
-- Rasmussen & Williams, *Gaussian Processes for Machine Learning* (2006): ch. 2 (regression, Cholesky prediction) and ch. 5 (model selection, marginal likelihood).
-- Bergstra & Bengio, *Random Search for Hyper-Parameter Optimization*, JMLR 13 (2012): why random search is a strong baseline on spaces with low effective dimension.
