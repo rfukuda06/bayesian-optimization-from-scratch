@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 830 380" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect width="830" height="380" fill="#ffffff"/>
+
+  <!-- Row 1: Gaussians -> RBF kernel -> GP prior -->
+  <g stroke="#3b74d1" stroke-width="1.5" fill="#eef4fd">
+    <rect x="40" y="30" width="200" height="58" rx="10"/>
+    <rect x="315" y="30" width="200" height="58" rx="10"/>
+    <rect x="590" y="30" width="200" height="58" rx="10"/>
+  </g>
+  <g text-anchor="middle" fill="#0f172a" font-size="17" font-weight="600">
+    <text x="140" y="55">Gaussians</text>
+    <text x="415" y="55">RBF kernel</text>
+    <text x="690" y="55">GP prior</text>
+  </g>
+  <g text-anchor="middle" fill="#64748b" font-size="12.5">
+    <text x="140" y="76">the joint-normal building block</text>
+    <text x="415" y="76">covariance from distance</text>
+    <text x="690" y="76">a Gaussian over functions</text>
+  </g>
+  <g stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)">
+    <line x1="240" y1="59" x2="311" y2="59"/>
+    <line x1="515" y1="59" x2="586" y2="59"/>
+  </g>
+
+  <!-- condition on data: GP prior down to GP posterior -->
+  <line x1="690" y1="88" x2="690" y2="158" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="678" y="129" text-anchor="end" fill="#64748b" font-size="13" font-style="italic">condition on data</text>
+
+  <!-- Row 2 (right to left): GP posterior -> fit hyperparameters -> Expected Improvement -->
+  <g stroke="#3b74d1" stroke-width="1.5" fill="#eef4fd">
+    <rect x="590" y="162" width="200" height="58" rx="10"/>
+    <rect x="315" y="162" width="200" height="58" rx="10"/>
+  </g>
+  <rect x="40" y="162" width="200" height="58" rx="10" stroke="#d97706" stroke-width="1.5" fill="#fff7e8"/>
+  <g text-anchor="middle" fill="#0f172a" font-size="17" font-weight="600">
+    <text x="690" y="187">GP posterior</text>
+    <text x="415" y="187">fit hyperparameters</text>
+    <text x="140" y="187">Expected Improvement</text>
+  </g>
+  <g text-anchor="middle" fill="#64748b" font-size="12.5">
+    <text x="690" y="208">mean and variance anywhere</text>
+    <text x="415" y="208">maximize LML (L-BFGS-B)</text>
+    <text x="140" y="208">exploit mean, explore variance</text>
+  </g>
+  <g stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)">
+    <line x1="590" y1="191" x2="519" y2="191"/>
+    <line x1="315" y1="191" x2="244" y2="191"/>
+  </g>
+
+  <!-- Expected Improvement down to BO loop -->
+  <line x1="140" y1="220" x2="140" y2="290" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <!-- Row 3: BO loop -> SVM tuning -->
+  <rect x="40" y="294" width="200" height="58" rx="10" stroke="#d97706" stroke-width="1.5" fill="#fff7e8"/>
+  <rect x="315" y="294" width="200" height="58" rx="10" stroke="#16a34a" stroke-width="1.5" fill="#eafaf1"/>
+  <g text-anchor="middle" fill="#0f172a" font-size="17" font-weight="600">
+    <text x="140" y="319">BO loop</text>
+    <text x="415" y="319">SVM tuning</text>
+  </g>
+  <g text-anchor="middle" fill="#64748b" font-size="12.5">
+    <text x="140" y="340">propose &#8594; evaluate &#8594; refit</text>
+    <text x="415" y="340">benchmarked vs random search</text>
+  </g>
+  <line x1="240" y1="323" x2="311" y2="323" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+</svg>

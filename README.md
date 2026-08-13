@@ -4,17 +4,7 @@ Gaussian process regression and Bayesian optimization implemented from the math 
 
 ## The pipeline
 
-```mermaid
-flowchart LR
-    A[Gaussians] --> B[RBF kernel]
-    B --> C[GP prior]
-    C -->|condition on data| D[GP posterior]
-    D -->|LML + L-BFGS-B| E[fit hyperparameters]
-    E --> F[Expected Improvement]
-    F --> G[BO loop]
-    G --> H[SVM tuning]
-    H --> I[vs random search]
-```
+![The pipeline: from Gaussians to a tuned SVM](figures/pipeline.svg)
 
 A joint Gaussian over function values, with covariance supplied by the RBF kernel, is the prior. Conditioning on observations gives the posterior mean and variance. Fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance; the BO loop repeatedly maximizes it, evaluates the objective there, and refits. The final experiment points that loop at a real hyperparameter search and compares it to random search.
 
