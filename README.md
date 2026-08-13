@@ -1,6 +1,6 @@
 # Gaussian Processes + Bayesian Optimization from scratch
 
-This is a Gaussian process regression and Bayesian optimization implemented in NumPy and SciPy. The project is exposed as one reusable call, `tune_model`, which tunes the hyperparameters of any scikit-learn estimator on any dataset provided. Every piece is validated: the GP against scikit-learn's, the acquisition function against a Monte-Carlo estimate, the optimizer against random search ([Correctness](#correctness) and [the benchmark](#the-benchmark-bo-vs-random-search-on-digits) have the numbers). The code is annotated at derivation grade and comes with a [full math walkthrough](docs/math-walkthrough.md).
+This is a Gaussian process regression and Bayesian optimization implemented in NumPy and SciPy. The project is exposed as one reusable call, `tune_model`, which tunes the hyperparameters of any scikit-learn estimator on any dataset provided. Every piece is validated: the GP against scikit-learn's, the acquisition function against a Monte-Carlo estimate, the optimizer against random search ([Correctness](#correctness) and [the benchmark](#the-benchmark-bo-vs-random-search-on-digits) have the numbers). The full math walkthrough is in [docs/math-walkthrough.md](docs/math-walkthrough.md).
 
 ## The pipeline
 
