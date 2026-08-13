@@ -68,7 +68,7 @@ $$
 k(x, x') = \sigma_f^2 \exp\left(-\frac{\lVert x - x' \rVert^2}{2\ell^2}\right).
 $$
 
-*Length scale $\ell$ controls wiggliness.* The correlation between two function
+**Length scale $\ell$ controls wiggliness.** The correlation between two function
 values at distance $r = \lVert x - x' \rVert$ is
 
 $$
@@ -104,7 +104,7 @@ The typical slope of a sample path is $\sigma_f / \ell$: halve the length scale 
 the typical slope doubles. That is the precise sense in which small $\ell$ means
 wiggly.
 
-*Signal variance $\sigma_f^2$ controls amplitude.* Since $k(x, x) = \sigma_f^2$, the
+**Signal variance $\sigma_f^2$ controls amplitude.** Since $k(x, x) = \sigma_f^2$, the
 prior marginal at every input is $f(x) \sim \mathcal{N}(0, \sigma_f^2)$: sample paths
 live mostly inside the band $\pm 2\sigma_f$. And because $\sigma_f^2$ multiplies the
 whole kernel, it scales every covariance without changing any correlation — it is a
@@ -483,7 +483,7 @@ $$
   The marginal value of a better mean is a probability; the marginal value of more
   uncertainty is a density. Both are positive, so EI always wants both.
 - $\xi$ raises the bar: larger $\xi$ discounts small mean advantages and tilts the
-  balance toward exploration. The default $\xi = 0.01$ is in standardized-$y$ units
+  balance toward exploration. The default $\xi = 0.01$ is in units of the standardized $y$
   (§6), i.e. one percent of a standard deviation of the observed values.
 
 **The $\sigma \to 0$ limit — and where the code deliberately differs.** Take the
@@ -619,9 +619,9 @@ past that you need structure (ARD length scales, additive models, trust regions,
 random embeddings).
 
 **LML multimodality.** The LML surface over $\theta$ routinely has several local
-optima that are *genuinely different explanations of the data* — e.g. short-$\ell$,
-low-noise "the function wiggles and we interpolate it" versus long-$\ell$,
-high-noise "the function is a smooth trend and the wiggle is noise." Multi-start
+optima that are *genuinely different explanations of the data* — e.g. small $\ell$ with
+low noise, "the function wiggles and we interpolate it", versus large $\ell$ with
+high noise, "the function is a smooth trend and the wiggle is noise." Multi-start
 L-BFGS-B (with the warm start always kept as a candidate) mitigates the risk of
 landing in a bad mode but guarantees nothing; the fitted $\theta$ can also jump
 between explanations across BO iterations as new data tips the balance. The fully
