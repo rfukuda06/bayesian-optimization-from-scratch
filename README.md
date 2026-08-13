@@ -127,6 +127,8 @@ Delegated to the numerical libraries: dense linear algebra primitives (`scipy.li
 
 ## Correctness
 
+The benchmark above measures how well the assembled optimizer performs; this section verifies that the components underneath compute the correct quantities. Each piece implemented from scratch is checked against an independent reference, and the checks run as part of the test suite:
+
 - **GP agreement with scikit-learn:** at fixed hyperparameters, the posterior mean, posterior std, and log marginal likelihood match `GaussianProcessRegressor` to `atol 1e-6`. Measured agreement is around `1e-9`; the demo script prints the observed `max|Δmean|` and `max|Δstd|`.
 - **EI against Monte Carlo:** the closed-form EI is checked against the mean of `100,000` draws from `N(μ, σ²)` passed through `max(f - y_best - ξ, 0)`, agreeing to `rtol 2e-2`.
 
