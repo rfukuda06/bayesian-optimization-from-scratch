@@ -6,7 +6,7 @@ This is a Gaussian process regression and Bayesian optimization implemented in N
 
 ![The pipeline: from Gaussians to a tuned SVM](figures/pipeline.svg)
 
-The prior is a joint Gaussian over function values, with covariance supplied by the RBF kernel. Conditioning on observations gives the posterior mean and variance, and fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance; the BO loop repeatedly maximizes that score, evaluates the objective at the chosen point, and refits. The final experiment applies the loop to a real hyperparameter search and compares it to random search.
+The prior is a joint Gaussian over function values, with covariance supplied by the RBF kernel. Conditioning on observations gives the posterior mean and variance, and fitting the kernel hyperparameters means maximizing the log marginal likelihood. Expected Improvement turns the posterior into a score that balances exploiting the mean against exploring the variance. The BO loop repeatedly maximizes that score, evaluates the objective at the chosen point, and refits. The final experiment applies the loop to a real hyperparameter search and compares it to random search.
 
 ## Usage
 
@@ -50,11 +50,11 @@ Caller-side   the final fit (model_factory(result.best_params).fit(X, y)),
               plotting, and holding out a test set beforehand
 ```
 
-The same data, arguments, and seed reproduce an identical run; `print(result)` prints a summary of the result.
+The same data, arguments, and seed reproduce an identical run. `print(result)` prints a summary of the result.
 
 Scope and requirements:
 
-- Any scikit-learn estimator works (a `Pipeline` counts); the library does not select model types: comparing an SVM against a random forest, for example, is two `tune_model` calls and two scores.
+- Any scikit-learn estimator works (a `Pipeline` counts). The library does not select model types: comparing an SVM against a random forest, for example, is two `tune_model` calls and two scores.
 - Parameter transforms such as `C = 10**log10_C` belong inside the factory, which keeps the GP searching a well-scaled space.
 - `X, y` must already be numeric arrays; there is no CSV parsing, encoding, or missing-value handling.
 - Bounds are continuous float ranges; categorical or conditional hyperparameters are out of scope.
@@ -68,9 +68,9 @@ Scope and requirements:
 
 ## The benchmark: BO vs random search on digits
 
-The demo above shows the interface; this experiment evaluates the optimizer itself. A single tuning run takes under a minute; this script runs twenty of them (10 seeds × {Bayesian optimization, random search} = 500 evaluations, all driven through `build_cv_objective`, the layer underneath `tune_model`), which is why it takes ~15 minutes: the result is a seed-averaged comparison with error bars rather than a single run.
+The demo above shows the interface. This experiment evaluates the optimizer itself. A single tuning run takes under a minute; this script runs twenty of them (10 seeds × {Bayesian optimization, random search} = 500 evaluations, all driven through `build_cv_objective`, the layer underneath `tune_model`), which is why it takes ~15 minutes: the result is a seed-averaged comparison with error bars rather than a single run.
 
-Tuning `SVC(C, γ)` on scikit-learn's digits dataset. Search space is `log₁₀C ∈ [-3, 3]`, `log₁₀γ ∈ [-5, 1]`; the objective is mean 5-fold stratified CV accuracy on an 80% pool. Each method gets 25 evaluations per seed, averaged over 10 seeds. A held-out 20% test set is touched once per method at the end.
+Tuning `SVC(C, γ)` on scikit-learn's digits dataset. Search space is `log₁₀C ∈ [-3, 3]`, `log₁₀γ ∈ [-5, 1]`. The objective is mean 5-fold stratified CV accuracy on an 80% pool. Each method gets 25 evaluations per seed, averaged over 10 seeds. A held-out 20% test set is touched once per method at the end.
 
 ![BO vs random search](figures/hp_comparison.png)
 
@@ -129,7 +129,7 @@ Delegated to the numerical libraries: dense linear algebra primitives (`scipy.li
 
 Each piece implemented from scratch is checked against an independent reference, and the checks run as part of the test suite:
 
-- **GP agreement with scikit-learn:** at fixed hyperparameters, the posterior mean, posterior std, and log marginal likelihood match `GaussianProcessRegressor` to `atol 1e-6`. Measured agreement is around `1e-9`; the demo script prints the observed `max|Δmean|` and `max|Δstd|`.
+- **GP agreement with scikit-learn:** at fixed hyperparameters, the posterior mean, posterior std, and log marginal likelihood match `GaussianProcessRegressor` to `atol 1e-6`. Measured agreement is around `1e-9`. The demo script prints the observed `max|Δmean|` and `max|Δstd|`.
 - **EI against Monte Carlo:** the closed-form EI is checked against the mean of `100,000` draws from `N(μ, σ²)` passed through `max(f - y_best - ξ, 0)`, agreeing to `rtol 2e-2`.
 
 ```
